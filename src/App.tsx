@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CalendarDays, 
   Settings, 
@@ -14,15 +14,25 @@ import {
   X, 
   ShieldAlert,
   Compass,
-  Heart
+  Heart,
+  CloudLightning,
+  Loader2
 } from 'lucide-react';
 import { Employee, HolidayLeave } from './types';
 import {
   getEmployeesFromStorage,
-  saveEmployeesToStorage,
-  getHolidaysFromStorage,
-  saveHolidaysToStorage
+  getHolidaysFromStorage
 } from './utils/storage';
+import {
+  subscribeEmployees,
+  subscribeHolidays,
+  subscribeSettings,
+  saveEmployeeToCloud,
+  deleteEmployeeFromCloud,
+  saveHolidayToCloud,
+  deleteHolidayFromCloud,
+  saveSettingsToCloud
+} from './utils/firebase';
 import EmployeeSettings from './components/EmployeeSettings';
 import HolidayCalendar from './components/HolidayCalendar';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
@@ -34,24 +44,100 @@ export default function App() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Load persistence state
-  const [employees, setEmployees] = useState<Employee[]>(() => getEmployeesFromStorage());
-  const [holidays, setHolidays] = useState<HolidayLeave[]>(() => getHolidaysFromStorage());
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [holidays, setHolidays] = useState<HolidayLeave[]>([]);
+  const [companyName, setCompanyName] = useState<string>('บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleEmployeesChange = (updatedList: Employee[]) => {
-    setEmployees(updatedList);
-    saveEmployeesToStorage(updatedList);
+  useEffect(() => {
+    // 1. One-time migration from LocalStorage to Firestore
+    const runMigration = async () => {
+      const localEmp = getEmployeesFromStorage();
+      const localHol = getHolidaysFromStorage();
+      const migrated = localStorage.getItem('firebase_migration_done') === 'true';
+      
+      if (!migrated && (localEmp.length > 0 || localHol.length > 0)) {
+        console.log('Migrating local storage data to Firestore...');
+        try {
+          for (const emp of localEmp) {
+            await saveEmployeeToCloud(emp);
+          }
+          for (const hol of localHol) {
+            await saveHolidayToCloud(hol);
+          }
+          const storedCompany = localStorage.getItem('company_name_holiday');
+          const storedWeekend = localStorage.getItem('weekend_type_holiday');
+          if (storedCompany || storedWeekend) {
+            await saveSettingsToCloud(
+              storedCompany || 'บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด',
+              storedWeekend || 'sat-sun'
+            );
+          }
+        } catch (e) {
+          console.error('Migration error: ', e);
+        }
+      }
+      localStorage.setItem('firebase_migration_done', 'true');
+    };
+
+    runMigration().then(() => {
+      // 2. Subscribe to realtime cloud updates
+      const unsubEmployees = subscribeEmployees((list) => {
+        setEmployees(list);
+        setIsLoading(false);
+      });
+
+      const unsubHolidays = subscribeHolidays((list) => {
+        setHolidays(list);
+      });
+
+      const unsubSettings = subscribeSettings((settings) => {
+        setCompanyName(settings.companyName);
+      });
+
+      return () => {
+        unsubEmployees();
+        unsubHolidays();
+        unsubSettings();
+      };
+    });
+  }, []);
+
+  const handleEmployeesChange = async (updatedList: Employee[]) => {
+    try {
+      // Determine deleted
+      const currentIds = new Set(updatedList.map(e => e.id));
+      const deletedEmployees = employees.filter(e => !currentIds.has(e.id));
+      for (const emp of deletedEmployees) {
+        await deleteEmployeeFromCloud(emp.id);
+      }
+      // Save/update
+      for (const emp of updatedList) {
+        await saveEmployeeToCloud(emp);
+      }
+    } catch (err: any) {
+      console.error("Error saving employees change to cloud: ", err);
+      alert("ไม่สามารถบันทึกข้อมูลพนักงานไปยัง Cloud ได้: " + err.message);
+    }
   };
 
-  const handleHolidaysChange = (updatedList: HolidayLeave[]) => {
-    setHolidays(updatedList);
-    saveHolidaysToStorage(updatedList);
+  const handleHolidaysChange = async (updatedList: HolidayLeave[]) => {
+    try {
+      // Determine deleted
+      const currentIds = new Set(updatedList.map(h => h.id));
+      const deletedHolidays = holidays.filter(h => !currentIds.has(h.id));
+      for (const hol of deletedHolidays) {
+        await deleteHolidayFromCloud(hol.id);
+      }
+      // Save/update
+      for (const hol of updatedList) {
+        await saveHolidayToCloud(hol);
+      }
+    } catch (err: any) {
+      console.error("Error saving holidays change to cloud: ", err);
+      alert("ไม่สามารถบันทึกข้อมูลวันหยุดไปยัง Cloud ได้: " + err.message);
+    }
   };
-
-  // Get current company name if configured, otherwise default
-  const storedCompany = localStorage.getItem('company_name_holiday');
-  const companyName = (!storedCompany || storedCompany === 'บริษัท บิวตี้ฟูล จำกัด') 
-    ? 'บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด' 
-    : storedCompany;
 
   const menuItems = [
     { id: 'holidays', label: 'ปฏิทินวันหยุด', icon: CalendarDays, desc: 'ปฏิทิน & บันทึกใบลาหยุด' },
@@ -136,10 +222,10 @@ export default function App() {
         {/* Sidebar Footer Info */}
         <div className="p-5 border-t border-slate-800/80 bg-slate-950/20 text-[10px] text-slate-500 space-y-2 shrink-0">
           <div className="flex items-center gap-1.5 font-semibold text-slate-400">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            <span>ความปลอดภัย: LocalStorage active</span>
+            <CloudLightning className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+            <span>เชื่อมต่อคลาวด์: Cloud Sync Active</span>
           </div>
-          <p className="leading-relaxed">ข้อมูลทั้งหมดจัดเก็บในเว็บบราวเซอร์เครื่องนี้ ไม่มีการอัปโหลดสู่อินเทอร์เน็ต</p>
+          <p className="leading-relaxed">ข้อมูลทั้งหมดเชื่อมโยงแบบเรียลไทม์ผ่าน Firestore ผู้ใช้ทุกคนเห็นข้อมูลตรงกันทันที</p>
           <div className="flex justify-between items-center pt-2 border-t border-slate-800/50 text-[9px]">
             <span>Company Portal</span>
             <span>v1.1.0</span>
@@ -160,35 +246,45 @@ export default function App() {
         <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
           
           {/* Active View Router */}
-          {activeMenu === 'holidays' && (
-            <HolidayCalendar 
-              employees={employees}
-              holidays={holidays}
-              onHolidaysChange={handleHolidaysChange}
-            />
-          )}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
+              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+              <h3 className="text-sm font-bold text-slate-800">กำลังเชื่อมต่อฐานข้อมูลคลาวด์...</h3>
+              <p className="text-xs text-slate-500 mt-1">ประสานข้อมูลแบบเรียลไทม์กับ Google Cloud Firestore</p>
+            </div>
+          ) : (
+            <>
+              {activeMenu === 'holidays' && (
+                <HolidayCalendar 
+                  employees={employees}
+                  holidays={holidays}
+                  onHolidaysChange={handleHolidaysChange}
+                />
+              )}
 
-          {activeMenu === 'employees' && (
-            <EmployeeSettings 
-              employees={employees} 
-              onEmployeesChange={handleEmployeesChange} 
-            />
-          )}
+              {activeMenu === 'employees' && (
+                <EmployeeSettings 
+                  employees={employees} 
+                  onEmployeesChange={handleEmployeesChange} 
+                />
+              )}
 
-          {activeMenu === 'analytics' && (
-            <AnalyticsDashboard 
-              employees={employees}
-              holidays={holidays}
-            />
-          )}
+              {activeMenu === 'analytics' && (
+                <AnalyticsDashboard 
+                  employees={employees}
+                  holidays={holidays}
+                />
+              )}
 
-          {activeMenu === 'settings' && (
-            <SystemSettings 
-              employees={employees}
-              holidays={holidays}
-              onEmployeesChange={handleEmployeesChange}
-              onHolidaysChange={handleHolidaysChange}
-            />
+              {activeMenu === 'settings' && (
+                <SystemSettings 
+                  employees={employees}
+                  holidays={holidays}
+                  onEmployeesChange={handleEmployeesChange}
+                  onHolidaysChange={handleHolidaysChange}
+                />
+              )}
+            </>
           )}
 
         </div>

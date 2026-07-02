@@ -749,6 +749,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         <option value="ฝ่ายบุคคล (HR)">ฝ่ายบุคคล (HR)</option>
                         <option value="ออกแบบ">ออกแบบ</option>
                         <option value="การตลาด">การตลาด</option>
+                        <option value="ฝ่ายขาย (Sales)">ฝ่ายขาย (Sales)</option>
                         <option value="บัญชี/การเงิน">บัญชี/การเงิน</option>
                         <option value="คลังสินค้า">คลังสินค้า</option>
                       </select>

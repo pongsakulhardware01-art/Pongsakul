@@ -13,9 +13,15 @@ import {
   CheckCircle2, 
   HelpCircle,
   Clock,
-  CalendarDays
+  CalendarDays,
+  Download,
+  Upload,
+  Database,
+  AlertTriangle,
+  FileJson
 } from 'lucide-react';
 import { Employee, HolidayLeave } from '../types';
+import { saveSettingsToCloud } from '../utils/firebase';
 
 interface SystemSettingsProps {
   employees: Employee[];
@@ -37,13 +43,104 @@ export default function SystemSettings({
   const [weekendType, setWeekendType] = useState(() => localStorage.getItem('weekend_type_holiday') || 'sat-sun');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isSeededAlert, setIsSeededAlert] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
-  const handleSaveCompany = (e: React.FormEvent) => {
+  const handleExportData = () => {
+    try {
+      const backupData = {
+        version: '1.2.0',
+        companyName: localStorage.getItem('company_name_holiday') || 'บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด',
+        weekendType: localStorage.getItem('weekend_type_holiday') || 'sat-sun',
+        employees,
+        holidays,
+        exportedAt: new Date().toISOString()
+      };
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      const dateFormatted = new Date().toISOString().split('T')[0];
+      link.href = url;
+      link.download = `backup_pongsakul_holiday_${dateFormatted}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการส่งออกข้อมูล: ' + err?.message);
+    }
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError(null);
+    setImportSuccess(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+
+        // Simple validation to check structure
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('โครงสร้างไฟล์ไม่ถูกต้อง');
+        }
+
+        const importedEmployees = parsed.employees;
+        const importedHolidays = parsed.holidays;
+
+        if (!Array.isArray(importedEmployees)) {
+          throw new Error('ไม่พบข้อมูลรายชื่อพนักงานที่ถูกต้องในไฟล์สะสม');
+        }
+
+        if (!Array.isArray(importedHolidays)) {
+          throw new Error('ไม่พบข้อมูลวันหยุดหรือใบลาหยุดที่ถูกต้องในไฟล์สะสม');
+        }
+
+        // Optional settings restoration
+        if (parsed.companyName && typeof parsed.companyName === 'string') {
+          localStorage.setItem('company_name_holiday', parsed.companyName);
+          setCompanyName(parsed.companyName);
+        }
+        if (parsed.weekendType && typeof parsed.weekendType === 'string') {
+          localStorage.setItem('weekend_type_holiday', parsed.weekendType);
+          setWeekendType(parsed.weekendType);
+        }
+
+        // Safe conversion of array fields
+        onEmployeesChange(importedEmployees);
+        onHolidaysChange(importedHolidays);
+
+        setImportSuccess(`นำเข้าข้อมูลสำเร็จ! โหลดรายชื่อพนักงาน ${importedEmployees.length} คน และ ประวัติวันหยุด ${importedHolidays.length} รายการ เรียบร้อยแล้ว`);
+        
+        // Let's reload to let everything reflect nicely after a short timeout
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+
+      } catch (err: any) {
+        setImportError(err?.message || 'เกิดข้อผิดพลาดในการอ่านไฟล์ JSON');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('company_name_holiday', companyName);
-    localStorage.setItem('weekend_type_holiday', weekendType);
-    alert('บันทึกการตั้งค่าบริษัทเรียบร้อยแล้ว! (หมายเหตุ: ระบบจะเปลี่ยนหัวตารางในเบราว์เซอร์ของคุณ)');
-    window.location.reload(); // Refresh to apply throughout the app state gracefully
+    try {
+      localStorage.setItem('company_name_holiday', companyName);
+      localStorage.setItem('weekend_type_holiday', weekendType);
+      await saveSettingsToCloud(companyName, weekendType);
+      alert('บันทึกการตั้งค่าบริษัทเรียบร้อยแล้ว! ข้อมูลได้รับการประสานงานผ่าน Cloud เรียบร้อย');
+      window.location.reload(); // Refresh to apply throughout the app state gracefully
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Cloud: ' + err?.message);
+    }
   };
 
   const handleSeedMockData = () => {
@@ -202,6 +299,83 @@ export default function SystemSettings({
           </div>
         </div>
 
+      </div>
+
+      {/* 💾 Full System Import & Export Backup */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-3">
+          <Database className="w-4.5 h-4.5 text-indigo-600" />
+          ระบบสำรองและกู้คืนข้อมูลทั้งหมดของระบบ (Full System Backup & Restore)
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          {/* Export section */}
+          <div className="space-y-3 bg-slate-50 p-4.5 rounded-xl border border-slate-100">
+            <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <Download className="w-4 h-4 text-emerald-600" />
+              ส่งออกไฟล์สำรองข้อมูลระบบทั้งหมด (Export Backup JSON)
+            </h4>
+            <p className="text-[11.5px] text-slate-500 leading-relaxed">
+              ทำการบันทึกข้อมูลรายชื่อพนักงานทั้งหมด ({employees.length} คน), ประวัติการลาวันหยุด ({holidays.length} รายการ), ชื่อองค์กร และค่าโครงสร้างระบบ ลงในไฟล์สำรอง <code>.json</code> เพื่อดาวน์โหลดเก็บรักษาไว้ภายนอกได้อย่างปลอดภัย
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleExportData}
+                className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
+              >
+                <Download className="w-4 h-4 mr-1.5" />
+                ดาวน์โหลดไฟล์สำรองข้อมูลทั้งหมด (.json)
+              </button>
+            </div>
+          </div>
+
+          {/* Import section */}
+          <div className="space-y-3 bg-slate-50 p-4.5 rounded-xl border border-slate-100">
+            <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <Upload className="w-4 h-4 text-indigo-600" />
+              นำเข้าไฟล์สำรองเพื่อกู้คืนข้อมูล (Import / Restore JSON)
+            </h4>
+            <p className="text-[11.5px] text-slate-500 leading-relaxed">
+              เลือกไฟล์สำรอง <code>.json</code> ที่เคยส่งออกไว้จากระบบนี้เพื่อกู้คืนรายชื่อพนักงาน ประวัติการลา และชื่อบริษัทกลับคืนสู่เครื่องของคุณ <span className="text-rose-600 font-bold">⚠️ คำเตือน: จะลบและเขียนทับข้อมูลเดิมทั้งหมดที่กำลังใช้งานอยู่</span>
+            </p>
+            
+            <div className="pt-1">
+              <label className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl px-4 py-5 hover:bg-white hover:border-indigo-500 transition cursor-pointer text-center group">
+                <FileJson className="w-8 h-8 text-slate-400 group-hover:text-indigo-500 transition mb-1.5" />
+                <span className="text-xs font-bold text-slate-700 block">คลิกที่นี่เพื่อเลือกไฟล์สำรองเพื่อนำเข้า</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">รับเฉพาะไฟล์ประเภท .json เท่านั้น</span>
+                
+                <input 
+                  type="file" 
+                  accept=".json"
+                  onChange={handleImportData}
+                  className="hidden" 
+                />
+              </label>
+            </div>
+
+            {importSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs rounded-xl flex items-start gap-1.5">
+                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">กู้คืนสำเร็จ!</p>
+                  <p className="text-[10.5px] text-emerald-700 mt-0.5">{importSuccess}</p>
+                </div>
+              </div>
+            )}
+
+            {importError && (
+              <div className="p-3 bg-rose-50 border border-rose-100 text-rose-800 text-xs rounded-xl flex items-start gap-1.5">
+                <AlertTriangle className="w-4.5 h-4.5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">เกิดข้อผิดพลาดในการนำเข้า</p>
+                  <p className="text-[10.5px] text-rose-700 mt-0.5">{importError}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* FAQs Panel */}

@@ -49,13 +49,15 @@ const LEAVE_TYPES: { type: HolidayType; label: string; color: string; bgColor: s
 ];
 
 export default function HolidayCalendar({ employees, holidays, onHolidaysChange }: HolidayCalendarProps) {
-  // Use current local date simulation: June 20, 2026
-  const simulatedToday = new Date('2026-06-20');
+  // Use current real local date
+  const simulatedToday = new Date();
   
   const [currentYear, setCurrentYear] = useState(simulatedToday.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(simulatedToday.getMonth()); // 0-indexed (5 for June)
+  const [currentMonth, setCurrentMonth] = useState(simulatedToday.getMonth()); // 0-indexed
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
+  
+  const [selectedDate, setSelectedDate] = useState<string>(simulatedToday.toISOString().split('T')[0]);
   
   // State for Add Holiday modal
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -300,9 +302,9 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
             <CalendarDays className="w-5 h-5 text-indigo-600" />
             ตารางลงวันหยุดและวันลาพนักงาน
           </h2>
-          <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5 font-mono">
-            <span className="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse"></span>
-            จำลองวันที่จำหน่ายระบบปัจจุบัน: 20 มิถุนายน 2569 (2026-06-20)
+          <p className="text-sm text-indigo-600 font-bold mt-1.5 flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+            วันที่ปัจจุบัน: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
@@ -381,11 +383,11 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
           </div>
 
           {/* Thai Week Days Row */}
-          <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs uppercase tracking-wider text-gray-400 py-1 border-b border-gray-50">
+          <div className="grid grid-cols-7 gap-1.5 text-center font-extrabold text-xs uppercase tracking-wider text-gray-500 py-2.5 border-b border-gray-100 bg-gray-50/50 rounded-t-xl">
             {THAI_SHORT_WEEKDAYS.map((day, ix) => (
               <div 
                 key={day} 
-                className={`py-1.5 ${ix === 0 ? 'text-red-500' : ix === 6 ? 'text-indigo-500' : 'text-gray-400'}`}
+                className={`py-1 ${ix === 0 ? 'text-rose-600' : ix === 6 ? 'text-indigo-600' : 'text-gray-500'}`}
               >
                 {day}
               </div>
@@ -393,56 +395,96 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
           </div>
 
           {/* Calendar Grid Cells */}
-          <div id="calendar-grid-cells" className="grid grid-cols-7 gap-1.5">
+          <div id="calendar-grid-cells" className="grid grid-cols-7 gap-1.5 sm:gap-2">
             {calendarCells.map((cell, idx) => {
               const activeHols = getHolidaysForDate(cell.dateString);
-              // Check if cell is simulated today
-              const isToday = cell.dateString === '2026-06-20';
+              // Check if cell is actual today
+              const todayStr = new Date().toLocaleDateString('en-CA');
+              const isToday = cell.dateString === todayStr;
+              const isSelected = cell.dateString === selectedDate;
 
               return (
                 <div
                   key={`${cell.dateString}-${idx}`}
-                  onClick={() => handleOpenAddForm(cell.dateString)}
-                  className={`min-h-[92px] p-1.5 bg-white border rounded-xl flex flex-col justify-between transition-all group relative cursor-pointer ${
-                    cell.isCurrentMonth ? 'border-gray-100 hover:border-indigo-200' : 'border-gray-50/70 bg-gray-50/20 opacity-50'
-                  } ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1 bg-indigo-50/10' : ''}`}
+                  onClick={() => setSelectedDate(cell.dateString)}
+                  className={`min-h-[64px] sm:min-h-[135px] md:min-h-[145px] p-1.5 sm:p-2.5 bg-white border rounded-xl sm:rounded-2xl flex flex-col justify-between transition-all duration-200 group relative cursor-pointer ${
+                    cell.isCurrentMonth ? 'border-gray-100 hover:border-indigo-400 hover:shadow-md' : 'border-gray-100/40 bg-gray-50/5 opacity-40'
+                  } ${isToday ? 'ring-2 ring-indigo-600 ring-offset-2 bg-indigo-50/20 shadow-sm' : 'shadow-xs'} ${
+                    isSelected ? 'ring-2 ring-emerald-500 ring-offset-1 border-emerald-400 bg-emerald-50/10' : ''
+                  }`}
                 >
                   {/* Calendar day digit */}
-                  <div className="flex justify-between items-center mb-1">
-                    <span className={`text-xs font-bold font-mono px-1.5 py-0.5 rounded-md ${
+                  <div className="flex justify-between items-center mb-1 sm:mb-2">
+                    <span className={`text-[11px] sm:text-xs md:text-sm font-extrabold font-mono px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg ${
                       isToday 
-                        ? 'bg-indigo-600 text-white shadow-sm' 
-                        : cell.isCurrentMonth ? 'text-gray-700' : 'text-gray-400'
+                        ? 'bg-indigo-600 text-white shadow-md scale-105 sm:scale-110' 
+                        : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
                     }`}>
                       {cell.dayNum}
                     </span>
                     
                     {/* Tiny visual hover add icon */}
                     <div className="opacity-0 group-hover:opacity-100 transition duration-150">
-                      <Plus className="w-3.5 h-3.5 text-indigo-500 hover:scale-110" />
+                      <Plus className="w-4 h-4 text-indigo-500 hover:scale-125" />
                     </div>
                   </div>
 
-                  {/* Holiday listing space */}
-                  <div className="flex-1 space-y-1 overflow-y-auto max-h-[58px] scrollbar-thin">
+                  {/* Holiday listing space - Desktop */}
+                  <div className="hidden sm:block flex-1 space-y-1.5 overflow-y-auto max-h-[92px] scrollbar-none">
                     {activeHols.map(hol => {
                       const typeDet = getLeaveTypeDetails(hol.type);
+                      const emp = employees.find(e => e.id === hol.employeeId);
+                      const isAll = hol.employeeId === 'all';
+                      
+                      // Visual prefix indicator for easy scanning
+                      let prefix = '📌';
+                      if (hol.type === 'vacation') prefix = '🏖️';
+                      else if (hol.type === 'sick') prefix = '🤒';
+                      else if (hol.type === 'personal') prefix = '💼';
+                      else if (hol.type === 'public_holiday') prefix = '📢';
+
+                      const displayName = isAll 
+                        ? hol.title 
+                        : emp 
+                          ? (emp.nickname ? `${emp.firstName} (${emp.nickname})` : emp.firstName)
+                          : 'พนักงาน';
+
                       return (
                         <div
                           key={hol.id}
                           onClick={(e) => {
-                            e.stopPropagation(); // prevent opening add form
+                            e.stopPropagation(); // prevent opening/selecting cell
                             setInspectedLeave(hol);
                           }}
-                          className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium leading-tight border hover:brightness-95 transition-all truncate select-none ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
+                          className={`px-2 py-1.5 rounded-lg text-[10.5px] md:text-[11px] font-extrabold leading-tight border shadow-xs hover:shadow-xs hover:brightness-95 transition-all select-none flex items-start gap-1 ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
                           title={`${getEmployeeName(hol.employeeId)}: ${hol.title}`}
                         >
-                          {hol.employeeId === 'all' ? '📢 ' : ''}
-                          {hol.employeeId !== 'all' ? (employees.find(e => e.id === hol.employeeId)?.firstName || 'พนักงาน') : hol.title}
+                          <span className="text-[11px] shrink-0 mt-0.5">{prefix}</span>
+                          <span className="whitespace-normal break-all">{displayName}</span>
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Holiday listing space - Mobile (Mini indicator dots) */}
+                  <div className="flex sm:hidden flex-wrap gap-1 mt-0.5 justify-center max-h-[24px] overflow-hidden">
+                    {activeHols.slice(0, 3).map(hol => {
+                      const typeDet = getLeaveTypeDetails(hol.type);
+                      return (
+                        <span
+                          key={hol.id}
+                          className={`w-1.5 h-1.5 rounded-full border border-black/5 shrink-0 ${typeDet.bgColor}`}
+                          title={`${getEmployeeName(hol.employeeId)}: ${hol.title}`}
+                        />
+                      );
+                    })}
+                    {activeHols.length > 3 && (
+                      <span className="text-[7px] font-extrabold text-indigo-600 leading-none flex items-center shrink-0">
+                        +{activeHols.length - 3}
+                      </span>
+                    )}
+                  </div>
+
                 </div>
               );
             })}
@@ -457,6 +499,75 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                 {t.label}
               </span>
             ))}
+          </div>
+
+          {/* Selected Date Detail Section (Interactive & Highly polished, extremely useful on mobile) */}
+          <div className="mt-4 bg-gray-50/60 border border-gray-100 rounded-2xl p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-3 mb-3">
+              <div>
+                <h3 className="text-xs sm:text-sm font-black text-gray-900 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Clock className="w-4 h-4 text-indigo-600" />
+                  รายการวันหยุด/วันลาของวันที่เลือก
+                </h3>
+                <p className="text-xs text-indigo-600 font-bold mt-1 font-sans">
+                  {new Date(selectedDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <button
+                onClick={() => handleOpenAddForm(selectedDate)}
+                className="flex items-center gap-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer w-full sm:w-auto justify-center"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                ลงวันหยุด/ลาของวันนี้
+              </button>
+            </div>
+
+            {/* Active Holidays on this selected date */}
+            {getHolidaysForDate(selectedDate).length === 0 ? (
+              <div className="text-center py-5 text-xs text-gray-400 font-semibold bg-white border border-dashed border-gray-100 rounded-xl">
+                ไม่มีประวัติวันหยุดหรือการลาในวันนี้
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {getHolidaysForDate(selectedDate).map(hol => {
+                  const typeDet = getLeaveTypeDetails(hol.type);
+                  const emp = employees.find(e => e.id === hol.employeeId);
+                  const isAll = hol.employeeId === 'all';
+                  
+                  let prefix = '📌';
+                  if (hol.type === 'vacation') prefix = '🏖️';
+                  else if (hol.type === 'sick') prefix = '🤒';
+                  else if (hol.type === 'personal') prefix = '💼';
+                  else if (hol.type === 'public_holiday') prefix = '📢';
+
+                  return (
+                    <div
+                      key={hol.id}
+                      onClick={() => setInspectedLeave(hol)}
+                      className="p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white hover:border-indigo-100 hover:shadow-xs transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-base sm:text-lg shrink-0">{prefix}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                            <span>{isAll ? 'ทุกคนในบริษัท' : emp ? `${emp.firstName} ${emp.lastName}` : 'พนักงาน'}</span>
+                            {emp?.nickname && <span className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded-md font-bold text-gray-600">({emp.nickname})</span>}
+                          </div>
+                          <div className="text-[10.5px] font-bold text-gray-500 mt-0.5 truncate max-w-[280px] sm:max-w-none">
+                            {hol.title} {hol.notes ? `(${hol.notes})` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 self-end sm:self-auto">
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}>
+                          {typeDet.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>
