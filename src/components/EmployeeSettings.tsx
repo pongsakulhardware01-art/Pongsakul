@@ -285,7 +285,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h2 id="employee-list-title" className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <User className="w-5 h-5 text-indigo-600" />
+            <User className="w-5 h-5 text-rose-600" />
             รายชื่อพนักงานทั้งหมด ({filteredEmployees.length} คน)
           </h2>
           <p className="text-sm text-slate-500 mt-1">จัดการข้อมูลรายชื่อ พนักงาน ตำแหน่ง แผนก และสถานะปฏิบัติงาน</p>
@@ -300,14 +300,14 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                 : 'bg-white hover:bg-gray-50 border-slate-200 text-slate-700'
             }`}
           >
-            <Upload className="w-4 h-4 mr-2 text-indigo-500" />
+            <Upload className="w-4 h-4 mr-2 text-rose-500" />
             นำเข้า / ส่งออกรายชื่อ
           </button>
           
           <button
             id="btn-add-employee"
             onClick={handleOpenAddForm}
-            className="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center justify-center px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition shadow-sm hover:shadow-md cursor-pointer"
           >
             <UserPlus className="w-4 h-4 mr-2" />
             เพิ่มพนักงานใหม่
@@ -324,10 +324,10 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white p-6 rounded-2xl border border-dashed border-indigo-200 shadow-sm space-y-5">
+            <div className="bg-white p-6 rounded-2xl border border-dashed border-rose-200 shadow-sm space-y-5">
               <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Upload className="w-4.5 h-4.5 text-indigo-600" />
+                  <Upload className="w-4.5 h-4.5 text-rose-600" />
                   แผงข้อมูลนำเข้า / ส่งออกรายชื่อพนักงาน (Employee Import & Export Backup)
                 </h3>
                 <button
@@ -357,7 +357,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                       <button
                         type="button"
                         onClick={handleExportJSON}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg transition cursor-pointer"
+                        className="inline-flex items-center justify-center px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5 mr-1.5" />
                         ดาวน์โหลดไฟล์ .json
@@ -433,7 +433,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
   { "firstName": "ชูเกียรติ", "lastName": "รุ่งเรือง", "employeeCode": "EMP006", "position": "วิศวกร", "department": "ไอที" }
 ]'
                       rows={4}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"
                     />
                   </div>
 
@@ -445,7 +445,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                       onClick={() => handleImportJSON(bulkInputText, 'merge')}
                       className={`flex-1 py-2 text-xs font-bold rounded-lg transition text-white cursor-pointer ${
                         bulkInputText 
-                          ? 'bg-indigo-600 hover:bg-indigo-700 shadow-sm' 
+                          ? 'bg-rose-600 hover:bg-rose-700 shadow-sm' 
                           : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       }`}
                     >
@@ -499,7 +499,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
               placeholder="ค้นหาชื่อ, รหัสพนักงาน, ตำแหน่ง..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 hover:bg-gray-100 focus:bg-white border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-500 rounded-xl text-sm transition"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 hover:bg-gray-100 focus:bg-white border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-rose-500 rounded-xl text-sm transition"
             />
           </div>
         </div>
@@ -512,7 +512,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
               id="filter-dept"
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 hover:bg-gray-100 focus:bg-white border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-500 rounded-xl text-sm transition appearance-none"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 hover:bg-gray-100 focus:bg-white border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-rose-500 rounded-xl text-sm transition appearance-none"
             >
               <option value="all">ทุกแผนก ({departments.length})</option>
               {departments.map(dept => (
@@ -528,7 +528,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
             id="filter-status"
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 focus:bg-white border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-500 rounded-xl text-sm transition"
+            className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 focus:bg-white border-0 ring-1 ring-gray-200 focus:ring-2 focus:ring-rose-500 rounded-xl text-sm transition"
           >
             <option value="all">ทุกสถานะ</option>
             <option value="active">กำลังทำงาน</option>
@@ -572,7 +572,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
               <div className="flex items-center space-x-3.5 mb-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg select-none ${
                   emp.isActive 
-                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' 
+                    ? 'bg-rose-50 text-rose-600 border border-rose-100' 
                     : 'bg-gray-200 text-gray-500'
                 }`}>
                   {emp.firstName.substring(0, 2)}
@@ -618,7 +618,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                   <button
                     id={`btn-edit-${emp.id}`}
                     onClick={() => handleOpenEditForm(emp)}
-                    className="p-1.5 hover:bg-gray-100 text-gray-500 hover:text-indigo-600 rounded-lg transition"
+                    className="p-1.5 hover:bg-gray-100 text-gray-500 hover:text-rose-600 rounded-lg transition"
                     title="แก้ไขข้อมูล"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -692,7 +692,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="text"
                         value={empCode}
                         onChange={(e) => setEmpCode(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น EMP01"
                         required
                       />
@@ -705,7 +705,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="text"
                         value={nickname}
                         onChange={(e) => setNickname(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น มาร์ค"
                       />
                     </div>
@@ -717,7 +717,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น สิทธิชัย"
                         required
                       />
@@ -730,7 +730,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น รักเจริญ"
                         required
                       />
@@ -743,7 +743,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="text"
                         value={position}
                         onChange={(e) => setPosition(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น UI/UX Designer"
                         required
                       />
@@ -757,7 +757,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         list="dept-suggestions"
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm bg-white"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm bg-white"
                         placeholder="พิมพ์หรือเลือกแผนก เช่น ผลิต, บัญชี"
                         required
                       />
@@ -775,7 +775,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="text"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น 089-xxxx"
                       />
                     </div>
@@ -787,7 +787,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm"
                         placeholder="เช่น email@domain.com"
                       />
                     </div>
@@ -799,7 +799,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                         type="checkbox"
                         checked={isActive}
                         onChange={(e) => setIsActive(e.target.checked)}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4"
+                        className="rounded border-gray-300 text-rose-600 focus:ring-rose-500 mr-2 h-4 w-4"
                       />
                       สถานะเปิดใช้งานพนักงาน (Active Employee)
                     </label>
@@ -815,7 +815,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
+                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
                     >
                       บันทึกข้อมูล
                     </button>

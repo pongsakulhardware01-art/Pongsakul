@@ -150,14 +150,13 @@ export default function App() {
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased font-sans flex flex-col lg:flex-row">
       
       {/* 📱 Mobile Top Header */}
-      <header className="lg:hidden bg-indigo-950 text-white px-5 h-16 flex items-center justify-between sticky top-0 z-40 shadow-md">
+      <header className="lg:hidden bg-slate-900 text-white px-5 h-16 flex items-center justify-between sticky top-0 z-40 shadow-md">
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-            <CalendarDays className="w-5.5 h-5.5 text-indigo-300" />
+          <div className="w-8 h-8 rounded-lg bg-rose-600/10 flex items-center justify-center">
+            <CalendarDays className="w-5.5 h-5.5 text-rose-400" />
           </div>
           <div>
             <h1 className="text-xs font-bold leading-tight font-sans text-white">{companyName}</h1>
-            <span className="text-[9px] text-indigo-300 font-bold block uppercase tracking-wider leading-none">Holiday Manager</span>
           </div>
         </div>
 
@@ -176,15 +175,12 @@ export default function App() {
       `}>
         {/* Desktop Brand Header */}
         <div className="hidden lg:flex p-6 border-b border-slate-800/80 items-center space-x-3 bg-slate-950/40">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+          <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-lg shadow-rose-500/20">
             <CalendarDays className="w-5.5 h-5.5" />
           </div>
           <div className="min-w-0">
             <span className="font-bold text-sm text-slate-100 tracking-tight block truncate" title={companyName}>
               {companyName}
-            </span>
-            <span className="text-[10px] text-indigo-400 font-bold tracking-wider uppercase block">
-              HOLIDAY MANAGER
             </span>
           </div>
         </div>
@@ -203,14 +199,14 @@ export default function App() {
                 }}
                 className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 cursor-pointer ${
                   isActive 
-                    ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' 
+                    ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-950/40' 
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
                 }`}
               >
                 <Icon className={`w-5 h-5 mr-3.5 shrink-0 transition ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
                 <div className="min-w-0">
                   <span className="text-xs tracking-wide block">{item.label}</span>
-                  <span className={`text-[9px] font-medium block leading-none mt-0.5 ${isActive ? 'text-indigo-200' : 'text-slate-500'}`}>
+                  <span className={`text-[9px] font-medium block leading-none mt-0.5 ${isActive ? 'text-rose-200' : 'text-slate-500'}`}>
                     {item.desc}
                   </span>
                 </div>
@@ -222,7 +218,7 @@ export default function App() {
         {/* Sidebar Footer Info */}
         <div className="p-5 border-t border-slate-800/80 bg-slate-950/20 text-[10px] text-slate-500 space-y-2 shrink-0">
           <div className="flex items-center gap-1.5 font-semibold text-slate-400">
-            <CloudLightning className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+            <CloudLightning className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
             <span>เชื่อมต่อคลาวด์: Cloud Sync Active</span>
           </div>
           <p className="leading-relaxed">ข้อมูลทั้งหมดเชื่อมโยงแบบเรียลไทม์ผ่าน Firestore ผู้ใช้ทุกคนเห็นข้อมูลตรงกันทันที</p>
@@ -248,7 +244,7 @@ export default function App() {
           {/* Active View Router */}
           {isLoading ? (
             <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
-              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+              <Loader2 className="w-10 h-10 text-rose-600 animate-spin mb-4" />
               <h3 className="text-sm font-bold text-slate-800">กำลังเชื่อมต่อฐานข้อมูลคลาวด์...</h3>
               <p className="text-xs text-slate-500 mt-1">ประสานข้อมูลแบบเรียลไทม์กับ Google Cloud Firestore</p>
             </div>

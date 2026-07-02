@@ -130,17 +130,17 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
   return (
     <div className="space-y-6">
       {/* Dashboard Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-slate-900 to-indigo-950 p-6 rounded-2xl text-white shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-slate-900 to-rose-950 p-6 rounded-2xl text-white shadow-sm">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2 font-sans text-white">
-            <BarChart3 className="w-5 h-5 text-indigo-400" />
+            <BarChart3 className="w-5 h-5 text-rose-400" />
             รายงานและแดชบอร์ดสถิติการลาหยุด
           </h2>
           <p className="text-sm text-slate-300 mt-1">
             สรุปข้อมูลสถิติลายอดสะสมพนักงาน วิเคราะห์ประเภทของวันลา ค้นหาข้อมูลเชิงลึกในองค์กร
           </p>
         </div>
-        <div className="text-xs bg-slate-800/60 border border-slate-700/50 px-3 py-1.5 rounded-lg text-indigo-200 font-mono self-start md:self-auto">
+        <div className="text-xs bg-slate-800/60 border border-slate-700/50 px-3 py-1.5 rounded-lg text-rose-200 font-mono self-start md:self-auto">
           อัปเดตข้อมูลแบบ Real-time
         </div>
       </div>
@@ -154,7 +154,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
             <span className="text-2xl font-black text-slate-900 block">{stats.totalEmployees} <span className="text-xs font-medium text-slate-500">คน</span></span>
             <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full inline-block">พร้อมปฏิบัติงาน {stats.activeEmployees} คน</span>
           </div>
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-400 block">รวมจำนวนวันที่หยุดงาน</span>
             <span className="text-2xl font-black text-slate-900 block">{stats.totalLeaveDays} <span className="text-xs font-medium text-slate-500">วัน</span></span>
-            <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full inline-block">จากใบลาทั้งหมด {stats.totalLeaves} ฉบับ</span>
+            <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full inline-block">จากใบลาทั้งหมด {stats.totalLeaves} ฉบับ</span>
           </div>
           <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
             <CalendarDays className="w-5 h-5" />
@@ -178,7 +178,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
             <span className="text-2xl font-black text-slate-900 block">{stats.averageDays} <span className="text-xs font-medium text-slate-500">วัน/คน</span></span>
             <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full inline-block">คำนวณเฉพาะพนักงาน Active</span>
           </div>
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-rose-100/50 text-rose-700 rounded-xl flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
           {/* Monthly Bar chart */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <CalendarDays className="w-4.5 h-4.5 text-indigo-600" />
+              <CalendarDays className="w-4.5 h-4.5 text-rose-600" />
               แนวโน้มรวมการหยุดงานในแต่ละเดือน (จำนวนวันในหมวดลาทั้งหมด)
             </h3>
             
@@ -225,7 +225,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
                     <div 
                       style={{ height: `${Math.max(percentHeight, 4)}%` }}
                       className={`w-full rounded-t-md transition ${
-                        val > 0 ? 'bg-indigo-600 group-hover:bg-indigo-500' : 'bg-slate-100'
+                        val > 0 ? 'bg-rose-600 group-hover:bg-rose-500' : 'bg-slate-100'
                       }`}
                     />
                     {/* Label */}
@@ -241,7 +241,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
           {/* Department Breakdown list */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <Layers className="w-4.5 h-4.5 text-indigo-700" />
+              <Layers className="w-4.5 h-4.5 text-rose-700" />
               การหยุดงานสะสมแบ่งตามแผนก (Department Leave Metrics)
             </h3>
             {Object.keys(stats.deptLeaves).length === 0 ? (
@@ -251,7 +251,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
                 {Object.entries(stats.deptLeaves).map(([dept, days]) => (
                   <div key={dept} className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100/80">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-xs font-black text-indigo-600">
+                      <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-xs font-black text-rose-600">
                         {dept.slice(0, 2)}
                       </div>
                       <div>
@@ -303,7 +303,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-indigo-700 block bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md text-center">
+                        <span className="text-xs font-black text-rose-700 block bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md text-center">
                           {item.days} วัน
                         </span>
                         <span className="text-[9px] text-slate-400 block mt-0.5">อันดับ {idx + 1}</span>
@@ -318,7 +318,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
           {/* Leave Type distribution */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <Percent className="w-4.5 h-4.5 text-indigo-600" />
+              <Percent className="w-4.5 h-4.5 text-rose-600" />
               สัดส่วนประเภทการลาหยุดงาน (Leave Type Breakdown)
             </h3>
 

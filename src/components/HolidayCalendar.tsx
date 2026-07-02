@@ -300,10 +300,10 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 id="calendar-view-header" className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-indigo-600" />
+            <CalendarDays className="w-5 h-5 text-rose-600" />
             ตารางลงวันหยุดและวันลาพนักงาน
           </h2>
-          <p className="text-sm text-indigo-600 font-bold mt-1.5 flex items-center gap-1.5">
+          <p className="text-sm text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
             วันที่ปัจจุบัน: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
@@ -321,13 +321,13 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
           </button>
           <button
             onClick={handleJumpToToday}
-            className="px-3.5 py-1.5 border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-300 bg-white hover:bg-indigo-50 text-xs font-bold rounded-lg transition cursor-pointer"
+            className="px-3.5 py-1.5 border border-gray-200 text-gray-600 hover:text-rose-600 hover:border-rose-300 bg-white hover:bg-rose-50 text-xs font-bold rounded-lg transition cursor-pointer"
           >
             ระบุเดือนปัจจุบัน
           </button>
           <button
             onClick={() => handleOpenAddForm()}
-            className="inline-flex items-center px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
+            className="inline-flex items-center px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4 mr-1" />
             ยื่นใบลา / เพิ่มการหยุด
@@ -369,7 +369,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                 <select
                   value={selectedEmployeeFilter}
                   onChange={(e) => setSelectedEmployeeFilter(e.target.value)}
-                  className="pl-2.5 pr-8 py-1.5 text-xs bg-white border border-gray-200 rounded-lg font-medium text-gray-700 outline-none appearance-none focus:ring-1 focus:ring-indigo-500"
+                  className="pl-2.5 pr-8 py-1.5 text-xs bg-white border border-gray-200 rounded-lg font-medium text-gray-700 outline-none appearance-none focus:ring-1 focus:ring-rose-500"
                 >
                   <option value="all">พนักงานทุกคน</option>
                   {employees.map(emp => (
@@ -388,7 +388,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
             {THAI_SHORT_WEEKDAYS.map((day, ix) => (
               <div 
                 key={day} 
-                className={`py-1 ${ix === 0 ? 'text-rose-600' : ix === 6 ? 'text-indigo-600' : 'text-gray-500'}`}
+                className={`py-1 ${ix === 0 ? 'text-rose-600' : 'text-gray-500'}`}
               >
                 {day}
               </div>
@@ -409,8 +409,8 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                   key={`${cell.dateString}-${idx}`}
                   onClick={() => setSelectedDate(cell.dateString)}
                   className={`min-h-[64px] sm:min-h-[135px] md:min-h-[145px] p-1.5 sm:p-2.5 bg-white border rounded-xl sm:rounded-2xl flex flex-col justify-between transition-all duration-200 group relative cursor-pointer ${
-                    cell.isCurrentMonth ? 'border-gray-100 hover:border-indigo-400 hover:shadow-md' : 'border-gray-100/40 bg-gray-50/5 opacity-40'
-                  } ${isToday ? 'ring-2 ring-indigo-600 ring-offset-2 bg-indigo-50/20 shadow-sm' : 'shadow-xs'} ${
+                    cell.isCurrentMonth ? 'border-gray-100 hover:border-rose-400 hover:shadow-md' : 'border-gray-100/40 bg-gray-50/5 opacity-40'
+                  } ${isToday ? 'ring-2 ring-rose-600 ring-offset-2 bg-rose-50/20 shadow-sm' : 'shadow-xs'} ${
                     isSelected ? 'ring-2 ring-emerald-500 ring-offset-1 border-emerald-400 bg-emerald-50/10' : ''
                   }`}
                 >
@@ -418,7 +418,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                   <div className="flex justify-between items-center mb-1 sm:mb-2">
                     <span className={`text-[11px] sm:text-xs md:text-sm font-extrabold font-mono px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg ${
                       isToday 
-                        ? 'bg-indigo-600 text-white shadow-md scale-105 sm:scale-110' 
+                        ? 'bg-rose-600 text-white shadow-md scale-105 sm:scale-110' 
                         : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
                     }`}>
                       {cell.dayNum}
@@ -426,7 +426,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                     
                     {/* Tiny visual hover add icon */}
                     <div className="opacity-0 group-hover:opacity-100 transition duration-150">
-                      <Plus className="w-4 h-4 text-indigo-500 hover:scale-125" />
+                      <Plus className="w-4 h-4 text-rose-500 hover:scale-125" />
                     </div>
                   </div>
 
@@ -481,7 +481,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       );
                     })}
                     {activeHols.length > 3 && (
-                      <span className="text-[7px] font-extrabold text-indigo-600 leading-none flex items-center shrink-0">
+                      <span className="text-[7px] font-extrabold text-rose-600 leading-none flex items-center shrink-0">
                         +{activeHols.length - 3}
                       </span>
                     )}
@@ -508,16 +508,16 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-3 mb-3">
               <div>
                 <h3 className="text-xs sm:text-sm font-black text-gray-900 flex items-center gap-1.5 uppercase tracking-wide">
-                  <Clock className="w-4 h-4 text-indigo-600" />
+                  <Clock className="w-4 h-4 text-rose-600" />
                   รายการวันหยุด/วันลาของวันที่เลือก
                 </h3>
-                <p className="text-xs text-indigo-600 font-bold mt-1 font-sans">
+                <p className="text-xs text-rose-600 font-bold mt-1 font-sans">
                   {new Date(selectedDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
               <button
                 onClick={() => handleOpenAddForm(selectedDate)}
-                className="flex items-center gap-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer w-full sm:w-auto justify-center"
+                className="flex items-center gap-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 px-3.5 py-1.5 rounded-xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer w-full sm:w-auto justify-center"
               >
                 <Plus className="w-3.5 h-3.5" />
                 ลงวันหยุด/ลาของวันนี้
@@ -547,7 +547,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                     <div
                       key={hol.id}
                       onClick={() => setInspectedLeave(hol)}
-                      className="p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white hover:border-indigo-100 hover:shadow-xs transition-all cursor-pointer"
+                      className="p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white hover:border-rose-100 hover:shadow-xs transition-all cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="text-base sm:text-lg shrink-0">{prefix}</span>
@@ -586,7 +586,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-white border border-indigo-200 shadow-md rounded-2xl p-5 relative overflow-hidden"
+                className="bg-white border border-rose-200 shadow-md rounded-2xl p-5 relative overflow-hidden"
               >
                 {/* Visual badge highlight */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${getLeaveTypeDetails(inspectedLeave.type).bgColor}`} />
@@ -632,7 +632,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                     <Clock className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-xs text-gray-400 font-medium">จำนวนวันหยุด</p>
-                      <p className="font-bold text-indigo-600">{inspectedLeave.durationDays} วัน</p>
+                      <p className="font-bold text-rose-600">{inspectedLeave.durationDays} วัน</p>
                     </div>
                   </div>
 
@@ -682,7 +682,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                   <div
                     key={hol.id}
                     onClick={() => setInspectedLeave(hol)}
-                    className="p-3 border border-gray-100 hover:border-indigo-100 bg-white hover:bg-indigo-50/10 rounded-xl cursor-pointer transition flex justify-between items-center gap-3"
+                    className="p-3 border border-gray-100 hover:border-rose-100 bg-white hover:bg-rose-50/10 rounded-xl cursor-pointer transition flex justify-between items-center gap-3"
                   >
                     <div className="space-y-1 truncate">
                       <div className="flex items-center gap-1.5">
@@ -700,7 +700,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       </p>
                     </div>
                     <div className="flex-shrink-0 text-right">
-                      <span className="text-xs font-bold text-indigo-600 block">{hol.durationDays} วัน</span>
+                      <span className="text-xs font-bold text-rose-600 block">{hol.durationDays} วัน</span>
                       <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">{typeDet.label}</span>
                     </div>
                   </div>
@@ -761,7 +761,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       id="form-leave-emp"
                       value={formEmployeeId}
                       onChange={(e) => setFormEmployeeId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg text-sm bg-white"
+                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm bg-white"
                       required
                     >
                       <option value="all">📢 วันหยุดบริษัทพิเศษ (วันหยุดบริษัททุกคน)</option>
@@ -782,7 +782,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                         type="date"
                         value={formStartDate}
                         onChange={(e) => setFormStartDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm"
                         required
                       />
                     </div>
@@ -793,7 +793,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                         type="date"
                         value={formEndDate}
                         onChange={(e) => setFormEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm"
                         required
                       />
                     </div>
@@ -806,7 +806,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       id="form-leave-type"
                       value={formType}
                       onChange={(e) => setFormType(e.target.value as HolidayType)}
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg text-sm bg-white"
+                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm bg-white"
                     >
                       {LEAVE_TYPES.map(t => (
                         <option key={t.type} value={t.type}>{t.label}</option>
@@ -823,7 +823,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
                       placeholder="เช่น ขอลากลับบ้านต่างจังหวัด, มีอาการไข้หวัด"
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm"
                       required
                     />
                   </div>
@@ -837,13 +837,13 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       onChange={(e) => setFormNotes(e.target.value)}
                       placeholder="ข้อมูลบันทึกเพิ่มเติมประกอบการอนุมัติ..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-lg text-sm resize-none"
+                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm resize-none"
                     />
                   </div>
 
                   {/* Total duration preview box */}
                   {formStartDate && formEndDate && (
-                    <div className="bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-center text-xs text-indigo-700 font-medium">
+                    <div className="bg-rose-50/50 border border-rose-100 p-3 rounded-lg text-center text-xs text-rose-700 font-medium">
                       ระยะเวลาพักเฉลี่ย: {calculateDaysBetween(formStartDate, formEndDate)} วันที่เลือก
                     </div>
                   )}
@@ -859,7 +859,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
+                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
                     >
                       บันทึกคำขอนี้
                     </button>
