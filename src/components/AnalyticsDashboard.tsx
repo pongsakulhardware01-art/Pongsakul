@@ -27,6 +27,7 @@ const TYPE_TRANSLATION: Record<HolidayType, { label: string; color: string; bg: 
   sick: { label: 'ลาป่วย', color: 'text-rose-600', bg: 'bg-rose-500', border: 'border-rose-100' },
   personal: { label: 'ลากิจ', color: 'text-teal-600', bg: 'bg-teal-500', border: 'border-teal-100' },
   public_holiday: { label: 'วันหยุดนักขัตฤกษ์', color: 'text-emerald-600', bg: 'bg-emerald-500', border: 'border-emerald-100' },
+  special_leave: { label: 'วันลาหยุดพิเศษ', color: 'text-fuchsia-600', bg: 'bg-fuchsia-500', border: 'border-fuchsia-100' },
   other: { label: 'อื่นๆ', color: 'text-purple-600', bg: 'bg-purple-500', border: 'border-purple-100' },
 };
 
@@ -50,6 +51,7 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
       sick: 0,
       personal: 0,
       public_holiday: 0,
+      special_leave: 0,
       other: 0,
     };
     

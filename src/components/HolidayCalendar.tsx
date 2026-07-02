@@ -45,6 +45,7 @@ const LEAVE_TYPES: { type: HolidayType; label: string; color: string; bgColor: s
   { type: 'sick', label: 'ลาป่วย', color: 'text-rose-800', bgColor: 'bg-rose-100', borderColor: 'border-rose-300' },
   { type: 'personal', label: 'ลากิจ', color: 'text-sky-800', bgColor: 'bg-sky-100', borderColor: 'border-sky-300' },
   { type: 'public_holiday', label: 'วันหยุดนักขัตฤกษ์', color: 'text-emerald-800', bgColor: 'bg-emerald-100', borderColor: 'border-emerald-300' },
+  { type: 'special_leave', label: 'วันลาหยุดพิเศษ', color: 'text-fuchsia-800', bgColor: 'bg-fuchsia-100', borderColor: 'border-fuchsia-300' },
   { type: 'other', label: 'ลาประเภทอื่น', color: 'text-purple-800', bgColor: 'bg-purple-100', borderColor: 'border-purple-300' }
 ];
 
@@ -442,6 +443,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       else if (hol.type === 'sick') prefix = '🤒';
                       else if (hol.type === 'personal') prefix = '💼';
                       else if (hol.type === 'public_holiday') prefix = '📢';
+                      else if (hol.type === 'special_leave') prefix = '✨';
 
                       const displayName = isAll 
                         ? hol.title 
@@ -539,6 +541,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                   else if (hol.type === 'sick') prefix = '🤒';
                   else if (hol.type === 'personal') prefix = '💼';
                   else if (hol.type === 'public_holiday') prefix = '📢';
+                  else if (hol.type === 'special_leave') prefix = '✨';
 
                   return (
                     <div

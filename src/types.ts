@@ -17,7 +17,7 @@ export interface Employee {
   joinDate?: string;
 }
 
-export type HolidayType = 'vacation' | 'sick' | 'personal' | 'public_holiday' | 'other';
+export type HolidayType = 'vacation' | 'sick' | 'personal' | 'public_holiday' | 'special_leave' | 'other';
 
 export interface HolidayLeave {
   id: string;

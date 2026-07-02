@@ -165,6 +165,19 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
   // Departments list for filter & select dropdown
   const departments = Array.from(new Set(employees.map(e => e.department).filter(Boolean)));
 
+  // Merge pre-defined standard departments and already inputted custom departments for datalist suggestions
+  const suggestedDepts = Array.from(new Set([
+    'บริหาร',
+    'ไอที',
+    'ฝ่ายบุคคล (HR)',
+    'ออกแบบ',
+    'การตลาด',
+    'ฝ่ายขาย (Sales)',
+    'บัญชี/การเงิน',
+    'คลังสินค้า',
+    ...departments
+  ]));
+
   const handleOpenAddForm = () => {
     // Generate next employee code representation
     const nextNum = employees.length + 1;
@@ -738,21 +751,21 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
 
                     <div className="space-y-1.5 col-span-1">
                       <label htmlFor="form-dept" className="text-xs font-semibold text-gray-600 block">แผนก <span className="text-red-500">*</span></label>
-                      <select
+                      <input
                         id="form-dept"
+                        type="text"
+                        list="dept-suggestions"
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm"
-                      >
-                        <option value="บริหาร">บริหาร</option>
-                        <option value="ไอที">ไอที</option>
-                        <option value="ฝ่ายบุคคล (HR)">ฝ่ายบุคคล (HR)</option>
-                        <option value="ออกแบบ">ออกแบบ</option>
-                        <option value="การตลาด">การตลาด</option>
-                        <option value="ฝ่ายขาย (Sales)">ฝ่ายขาย (Sales)</option>
-                        <option value="บัญชี/การเงิน">บัญชี/การเงิน</option>
-                        <option value="คลังสินค้า">คลังสินค้า</option>
-                      </select>
+                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg text-sm bg-white"
+                        placeholder="พิมพ์หรือเลือกแผนก เช่น ผลิต, บัญชี"
+                        required
+                      />
+                      <datalist id="dept-suggestions">
+                        {suggestedDepts.map(dept => (
+                          <option key={dept} value={dept} />
+                        ))}
+                      </datalist>
                     </div>
 
                     <div className="space-y-1.5 col-span-1">
