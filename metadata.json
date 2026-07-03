@@ -1,6 +1,8 @@
 {
-  "name": "Company Holiday Manager",
-  "description": "Internal employee holiday and configuration tool.",
+  "name": "Pongsakul Hardware Calculator",
+  "description": "เครื่องมือคำนวณราคาวัสดุแผ่นพื้น เสาเข็ม และคำนวณน้ำหนักรวม สำหรับลูกค้าและพนักงาน Pongsakul Hardware",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
