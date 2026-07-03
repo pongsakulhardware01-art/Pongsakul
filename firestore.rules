@@ -1,12 +1,81 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Global default deny safety net
     match /{document=**} {
       allow read, write: if false;
     }
 
-    match /settings/{documentId} {
-      allow read, write: if documentId == "config";
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Schema and structural validations
+    function isValidEmployee(data) {
+      return data.keys().hasAll(['id', 'employeeCode', 'firstName', 'lastName', 'position', 'department', 'isActive'])
+        && data.keys().size() <= 11
+        && data.id is string && data.id.size() <= 128
+        && data.employeeCode is string && data.employeeCode.size() <= 32
+        && data.firstName is string && data.firstName.size() <= 100
+        && data.lastName is string && data.lastName.size() <= 100
+        && (!data.keys().hasAny(['nickname']) || (data.nickname is string && data.nickname.size() <= 100))
+        && data.position is string && data.position.size() <= 100
+        && data.department is string && data.department.size() <= 100
+        && (!data.keys().hasAny(['phone']) || (data.phone is string && data.phone.size() <= 32))
+        && (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 100))
+        && data.isActive is bool
+        && (!data.keys().hasAny(['joinDate']) || (data.joinDate is string && data.joinDate.size() <= 32));
+    }
+
+    function isValidHoliday(data) {
+      return data.keys().hasAll(['id', 'employeeId', 'startDate', 'endDate', 'type', 'title', 'durationDays'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.employeeId is string && data.employeeId.size() <= 128
+        && data.startDate is string && data.startDate.size() <= 32
+        && data.endDate is string && data.endDate.size() <= 32
+        && data.type is string && data.type in ['vacation', 'sick', 'personal', 'public_holiday', 'other']
+        && data.title is string && data.title.size() <= 200
+        && (!data.keys().hasAny(['notes']) || (data.notes is string && data.notes.size() <= 1000))
+        && (data.durationDays is int || data.durationDays is float);
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['companyName', 'weekendType'])
+        && data.keys().size() == 2
+        && data.companyName is string && data.companyName.size() <= 200
+        && data.weekendType is string && data.weekendType.size() <= 50;
+    }
+
+    // Collection routing and rule mappings
+    match /employees/{employeeId} {
+      allow read: if true;
+      allow create: if isValidId(employeeId) && isValidEmployee(incoming()) && incoming().id == employeeId;
+      allow update: if isValidId(employeeId) && isValidEmployee(incoming()) && incoming().id == employeeId;
+      allow delete: if isValidId(employeeId);
+    }
+
+    match /holidays/{holidayId} {
+      allow read: if true;
+      allow create: if isValidId(holidayId) && isValidHoliday(incoming()) && incoming().id == holidayId;
+      allow update: if isValidId(holidayId) && isValidHoliday(incoming()) && incoming().id == holidayId;
+      allow delete: if isValidId(holidayId);
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update: if settingId == 'global' && isValidSettings(incoming());
+      allow delete: if false;
     }
   }
 }
