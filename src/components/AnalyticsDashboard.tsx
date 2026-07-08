@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Employee, HolidayLeave, HolidayType } from '../types';
+import { Employee, HolidayLeave, HolidayType, LeaveQuotas } from '../types';
 import { 
   Users, 
   CalendarDays, 
@@ -14,12 +14,15 @@ import {
   TrendingUp, 
   Briefcase, 
   Layers,
-  Percent
+  Percent,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
   employees: Employee[];
   holidays: HolidayLeave[];
+  leaveQuotas: LeaveQuotas;
 }
 
 const TYPE_TRANSLATION: Record<HolidayType, { label: string; color: string; bg: string; border: string }> = {
@@ -31,7 +34,7 @@ const TYPE_TRANSLATION: Record<HolidayType, { label: string; color: string; bg: 
   other: { label: 'อื่นๆ', color: 'text-purple-600', bg: 'bg-purple-500', border: 'border-purple-100' },
 };
 
-export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDashboardProps) {
+export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }: AnalyticsDashboardProps) {
   
   // Basic Statistics Calculations
   const stats = useMemo(() => {
@@ -106,6 +109,57 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
       }
     });
 
+    // Individual Employee Leave Quota Summary
+    const employeeLeaveSummary = employees.map(emp => {
+      const empHolidays = holidays.filter(h => h.employeeId === emp.id);
+      
+      const usedVacation = empHolidays.filter(h => h.type === 'vacation').reduce((sum, h) => sum + h.durationDays, 0);
+      const usedSick = empHolidays.filter(h => h.type === 'sick').reduce((sum, h) => sum + h.durationDays, 0);
+      const usedPersonal = empHolidays.filter(h => h.type === 'personal').reduce((sum, h) => sum + h.durationDays, 0);
+      const usedSpecial = empHolidays.filter(h => h.type === 'special_leave').reduce((sum, h) => sum + h.durationDays, 0);
+      const usedOther = empHolidays.filter(h => h.type === 'other').reduce((sum, h) => sum + h.durationDays, 0);
+
+      const remainVacation = Math.max(0, leaveQuotas.vacation - usedVacation);
+      const remainSick = Math.max(0, leaveQuotas.sick - usedSick);
+      const remainPersonal = Math.max(0, leaveQuotas.personal - usedPersonal);
+      const remainSpecial = Math.max(0, leaveQuotas.special_leave - usedSpecial);
+      const remainOther = Math.max(0, leaveQuotas.other - usedOther);
+
+      const isVacationExceeded = usedVacation > leaveQuotas.vacation;
+      const isSickExceeded = usedSick > leaveQuotas.sick;
+      const isPersonalExceeded = usedPersonal > leaveQuotas.personal;
+      const isSpecialExceeded = usedSpecial > leaveQuotas.special_leave;
+      const isOtherExceeded = usedOther > leaveQuotas.other;
+
+      const hasAnyExceeded = isVacationExceeded || isSickExceeded || isPersonalExceeded || isSpecialExceeded || isOtherExceeded;
+
+      return {
+        employee: emp,
+        used: {
+          vacation: usedVacation,
+          sick: usedSick,
+          personal: usedPersonal,
+          special_leave: usedSpecial,
+          other: usedOther
+        },
+        remain: {
+          vacation: remainVacation,
+          sick: remainSick,
+          personal: remainPersonal,
+          special_leave: remainSpecial,
+          other: remainOther
+        },
+        exceeded: {
+          vacation: isVacationExceeded,
+          sick: isSickExceeded,
+          personal: isPersonalExceeded,
+          special_leave: isSpecialExceeded,
+          other: isOtherExceeded
+        },
+        hasAnyExceeded
+      };
+    });
+
     return {
       totalEmployees,
       activeEmployees,
@@ -117,8 +171,9 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
       monthlyData,
       topEmployees,
       deptLeaves,
+      employeeLeaveSummary,
     };
-  }, [employees, holidays]);
+  }, [employees, holidays, leaveQuotas]);
 
   const thaiMonthsAbbr = [
     'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 
@@ -349,6 +404,177 @@ export default function AnalyticsDashboard({ employees, holidays }: AnalyticsDas
         </div>
 
       </div>
+
+      {/* Employee Leave Quotas Balance Section */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
+              <Clock className="w-5 h-5 text-rose-600" />
+              สรุปสิทธิ์วันลาคงเหลือรายบุคคล (Employee Leave Quota Balance)
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              แสดงสิทธิ์การลาตามเกณฑ์ขั้นต่ำตามกฎหมายหรือนโยบายองค์กร (ลาพักร้อน {leaveQuotas.vacation} วัน | ลาป่วย {leaveQuotas.sick} วัน | ลากิจ {leaveQuotas.personal} วัน)
+            </p>
+          </div>
+          <div className="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-1.5 rounded-lg border border-rose-100 self-start sm:self-auto flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+            คำนวณสิทธิ์คงเหลืออัตโนมัติ
+          </div>
+        </div>
+
+        {stats.employeeLeaveSummary.length === 0 ? (
+          <div className="text-center py-8 text-xs text-slate-400">
+            ยังไม่มีรายชื่อพนักงานในระบบ
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="border-b border-slate-100 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-1">พนักงาน</th>
+                  <th className="py-3 px-2 text-center">ลาพักร้อน ({leaveQuotas.vacation} วัน)</th>
+                  <th className="py-3 px-2 text-center">ลาป่วย ({leaveQuotas.sick} วัน)</th>
+                  <th className="py-3 px-2 text-center">ลากิจ ({leaveQuotas.personal} วัน)</th>
+                  <th className="py-3 px-2 text-center">ลาหยุดพิเศษ ({leaveQuotas.special_leave} วัน)</th>
+                  <th className="py-3 px-2 text-center">อื่นๆ ({leaveQuotas.other} วัน)</th>
+                  <th className="py-3 px-1 text-center">สถานะสิทธิ์</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {stats.employeeLeaveSummary.map((summary) => {
+                  const emp = summary.employee;
+                  return (
+                    <tr key={emp.id} className="hover:bg-slate-50/50 transition">
+                      <td className="py-3 px-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center uppercase shrink-0">
+                            {emp.firstName.slice(0, 1)}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-800 block truncate">
+                              {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block truncate font-mono">
+                              {emp.employeeCode} • {emp.position}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {/* Vacation */}
+                      <td className="py-3 px-2 text-center">
+                        <div className="inline-block">
+                          <span className="text-xs font-black block text-slate-800">
+                            {summary.used.vacation} / {leaveQuotas.vacation} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                            summary.exceeded.vacation 
+                              ? 'bg-rose-50 text-rose-600' 
+                              : summary.remain.vacation === 0 
+                                ? 'bg-slate-50 text-slate-400' 
+                                : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {summary.exceeded.vacation ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.vacation} วัน`}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Sick */}
+                      <td className="py-3 px-2 text-center">
+                        <div className="inline-block">
+                          <span className="text-xs font-black block text-slate-800">
+                            {summary.used.sick} / {leaveQuotas.sick} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                            summary.exceeded.sick 
+                              ? 'bg-rose-50 text-rose-600' 
+                              : summary.remain.sick === 0 
+                                ? 'bg-slate-50 text-slate-400' 
+                                : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {summary.exceeded.sick ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.sick} วัน`}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Personal */}
+                      <td className="py-3 px-2 text-center">
+                        <div className="inline-block">
+                          <span className="text-xs font-black block text-slate-800">
+                            {summary.used.personal} / {leaveQuotas.personal} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                            summary.exceeded.personal 
+                              ? 'bg-rose-50 text-rose-600' 
+                              : summary.remain.personal === 0 
+                                ? 'bg-slate-50 text-slate-400' 
+                                : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {summary.exceeded.personal ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.personal} วัน`}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Special Leave */}
+                      <td className="py-3 px-2 text-center">
+                        <div className="inline-block">
+                          <span className="text-xs font-black block text-slate-800">
+                            {summary.used.special_leave} / {leaveQuotas.special_leave} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                            summary.exceeded.special_leave 
+                              ? 'bg-rose-50 text-rose-600' 
+                              : summary.remain.special_leave === 0 
+                                ? 'bg-slate-50 text-slate-400' 
+                                : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {summary.exceeded.special_leave ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.special_leave} วัน`}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Other */}
+                      <td className="py-3 px-2 text-center">
+                        <div className="inline-block">
+                          <span className="text-xs font-black block text-slate-800">
+                            {summary.used.other} / {leaveQuotas.other} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                            summary.exceeded.other 
+                              ? 'bg-rose-50 text-rose-600' 
+                              : summary.remain.other === 0 
+                                ? 'bg-slate-50 text-slate-400' 
+                                : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {summary.exceeded.other ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.other} วัน`}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Overall Status */}
+                      <td className="py-3 px-1 text-center">
+                        {summary.hasAnyExceeded ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md">
+                            <AlertTriangle className="w-3 h-3 text-rose-500" />
+                            เกินโควตา ⚠️
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            มีสิทธิ์คงเหลือ
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

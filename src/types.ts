@@ -29,3 +29,12 @@ export interface HolidayLeave {
   notes?: string;
   durationDays: number;
 }
+
+export interface LeaveQuotas {
+  vacation: number;
+  sick: number;
+  personal: number;
+  special_leave: number;
+  other: number;
+}
+

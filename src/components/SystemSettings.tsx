@@ -20,12 +20,13 @@ import {
   AlertTriangle,
   FileJson
 } from 'lucide-react';
-import { Employee, HolidayLeave } from '../types';
+import { Employee, HolidayLeave, LeaveQuotas } from '../types';
 import { saveSettingsToCloud } from '../utils/firebase';
 
 interface SystemSettingsProps {
   employees: Employee[];
   holidays: HolidayLeave[];
+  leaveQuotas: LeaveQuotas;
   onEmployeesChange: (updatedList: Employee[]) => void;
   onHolidaysChange: (updatedList: HolidayLeave[]) => void;
 }
@@ -33,6 +34,7 @@ interface SystemSettingsProps {
 export default function SystemSettings({ 
   employees, 
   holidays, 
+  leaveQuotas,
   onEmployeesChange, 
   onHolidaysChange 
 }: SystemSettingsProps) {
@@ -41,6 +43,20 @@ export default function SystemSettings({
     return (!stored || stored === 'บริษัท บิวตี้ฟูล จำกัด') ? 'บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด' : stored;
   });
   const [weekendType, setWeekendType] = useState(() => localStorage.getItem('weekend_type_holiday') || 'sat-sun');
+
+  const [vacationQuota, setVacationQuota] = useState(leaveQuotas.vacation);
+  const [sickQuota, setSickQuota] = useState(leaveQuotas.sick);
+  const [personalQuota, setPersonalQuota] = useState(leaveQuotas.personal);
+  const [specialQuota, setSpecialQuota] = useState(leaveQuotas.special_leave);
+  const [otherQuota, setOtherQuota] = useState(leaveQuotas.other);
+
+  React.useEffect(() => {
+    setVacationQuota(leaveQuotas.vacation);
+    setSickQuota(leaveQuotas.sick);
+    setPersonalQuota(leaveQuotas.personal);
+    setSpecialQuota(leaveQuotas.special_leave);
+    setOtherQuota(leaveQuotas.other);
+  }, [leaveQuotas]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isSeededAlert, setIsSeededAlert] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -135,7 +151,15 @@ export default function SystemSettings({
     try {
       localStorage.setItem('company_name_holiday', companyName);
       localStorage.setItem('weekend_type_holiday', weekendType);
-      await saveSettingsToCloud(companyName, weekendType);
+      await saveSettingsToCloud(
+        companyName, 
+        weekendType,
+        vacationQuota,
+        sickQuota,
+        personalQuota,
+        specialQuota,
+        otherQuota
+      );
       alert('บันทึกการตั้งค่าบริษัทเรียบร้อยแล้ว! ข้อมูลได้รับการประสานงานผ่าน Cloud เรียบร้อย');
       window.location.reload(); // Refresh to apply throughout the app state gracefully
     } catch (err: any) {
@@ -220,6 +244,65 @@ export default function SystemSettings({
                 <option value="sun-only">วันอาทิตย์ (เฉพาะบางธุรกิจสำนักงาน)</option>
                 <option value="none">ไม่มีวันหยุดประจำสัปดาห์คงที่</option>
               </select>
+            </div>
+
+            <div className="pt-3.5 border-t border-slate-100 space-y-3">
+              <span className="text-xs font-bold text-slate-800 block flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-rose-500" />
+                ตั้งค่าสิทธิ์วันลาขั้นต่ำประจำปี (สิทธิ์ตามกฎหมาย / นโยบายบริษัท)
+              </span>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="space-y-1">
+                  <label className="text-[10.5px] font-bold text-slate-500 block">ลาพักร้อน (สิทธิ์กฎหมาย 6 วัน)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={vacationQuota}
+                    onChange={(e) => setVacationQuota(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10.5px] font-bold text-slate-500 block">ลาป่วย (สิทธิ์กฎหมาย 30 วัน)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={sickQuota}
+                    onChange={(e) => setSickQuota(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10.5px] font-bold text-slate-500 block">ลากิจ (สิทธิ์กฎหมาย 3 วัน)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={personalQuota}
+                    onChange={(e) => setPersonalQuota(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10.5px] font-bold text-slate-500 block">วันลาหยุดพิเศษ</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={specialQuota}
+                    onChange={(e) => setSpecialQuota(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
+                  />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[10.5px] font-bold text-slate-500 block">อื่นๆ</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={otherQuota}
+                    onChange={(e) => setOtherQuota(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
+                  />
+                </div>
+              </div>
             </div>
 
             <button

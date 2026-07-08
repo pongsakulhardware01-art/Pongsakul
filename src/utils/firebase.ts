@@ -110,19 +110,37 @@ export const subscribeHolidays = (callback: (holidays: HolidayLeave[]) => void) 
   });
 };
 
-export const subscribeSettings = (callback: (settings: { companyName: string; weekendType: string }) => void) => {
+export const subscribeSettings = (callback: (settings: { 
+  companyName: string; 
+  weekendType: string;
+  vacationQuota?: number;
+  sickQuota?: number;
+  personalQuota?: number;
+  specialQuota?: number;
+  otherQuota?: number;
+}) => void) => {
   const settingsDoc = doc(db, 'settings', 'global');
   return onSnapshot(settingsDoc, (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
       callback({
         companyName: data.companyName || 'บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด',
-        weekendType: data.weekendType || 'sat-sun'
+        weekendType: data.weekendType || 'sat-sun',
+        vacationQuota: data.vacationQuota !== undefined ? Number(data.vacationQuota) : 6,
+        sickQuota: data.sickQuota !== undefined ? Number(data.sickQuota) : 30,
+        personalQuota: data.personalQuota !== undefined ? Number(data.personalQuota) : 3,
+        specialQuota: data.specialQuota !== undefined ? Number(data.specialQuota) : 5,
+        otherQuota: data.otherQuota !== undefined ? Number(data.otherQuota) : 5,
       });
     } else {
       callback({
         companyName: 'บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด',
-        weekendType: 'sat-sun'
+        weekendType: 'sat-sun',
+        vacationQuota: 6,
+        sickQuota: 30,
+        personalQuota: 3,
+        specialQuota: 5,
+        otherQuota: 5,
       });
     }
   }, (error) => {
@@ -188,11 +206,27 @@ export const deleteHolidayFromCloud = async (holidayId: string) => {
   }
 };
 
-export const saveSettingsToCloud = async (companyName: string, weekendType: string) => {
+export const saveSettingsToCloud = async (
+  companyName: string, 
+  weekendType: string,
+  vacationQuota?: number,
+  sickQuota?: number,
+  personalQuota?: number,
+  specialQuota?: number,
+  otherQuota?: number
+) => {
   const path = 'settings/global';
   try {
     const docRef = doc(db, 'settings', 'global');
-    await setDoc(docRef, { companyName, weekendType });
+    await setDoc(docRef, { 
+      companyName, 
+      weekendType,
+      vacationQuota: vacationQuota ?? 6,
+      sickQuota: sickQuota ?? 30,
+      personalQuota: personalQuota ?? 3,
+      specialQuota: specialQuota ?? 5,
+      otherQuota: otherQuota ?? 5
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }

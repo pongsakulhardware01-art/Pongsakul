@@ -16,9 +16,11 @@ import {
   Compass,
   Heart,
   CloudLightning,
-  Loader2
+  Loader2,
+  Calculator,
+  ExternalLink
 } from 'lucide-react';
-import { Employee, HolidayLeave } from './types';
+import { Employee, HolidayLeave, LeaveQuotas } from './types';
 import {
   getEmployeesFromStorage,
   getHolidaysFromStorage
@@ -40,13 +42,21 @@ import SystemSettings from './components/SystemSettings';
 
 export default function App() {
   // Navigation menu state
-  const [activeMenu, setActiveMenu] = useState<'holidays' | 'employees' | 'analytics' | 'settings'>('holidays');
+  const [activeMenu, setActiveMenu] = useState<'registry' | 'settings'>('registry');
+  const [activeSubTab, setActiveSubTab] = useState<'holidays' | 'employees' | 'analytics'>('holidays');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Load persistence state
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [holidays, setHolidays] = useState<HolidayLeave[]>([]);
   const [companyName, setCompanyName] = useState<string>('บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด');
+  const [leaveQuotas, setLeaveQuotas] = useState<LeaveQuotas>({
+    vacation: 6,
+    sick: 30,
+    personal: 3,
+    special_leave: 5,
+    other: 5
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -93,6 +103,13 @@ export default function App() {
 
       const unsubSettings = subscribeSettings((settings) => {
         setCompanyName(settings.companyName);
+        setLeaveQuotas({
+          vacation: settings.vacationQuota ?? 6,
+          sick: settings.sickQuota ?? 30,
+          personal: settings.personalQuota ?? 3,
+          special_leave: settings.specialQuota ?? 5,
+          other: settings.otherQuota ?? 5
+        });
       });
 
       return () => {
@@ -140,9 +157,7 @@ export default function App() {
   };
 
   const menuItems = [
-    { id: 'holidays', label: 'ปฏิทินวันหยุด', icon: CalendarDays, desc: 'ปฏิทิน & บันทึกใบลาหยุด' },
-    { id: 'employees', label: 'จัดการรายชื่อพนักงาน', icon: Users, desc: 'ประวัติพนักงาน & ส่งออก' },
-    { id: 'analytics', label: 'แดชบอร์ด & สถิติ', icon: BarChart3, desc: 'วิเคราะห์ยอดลาองค์กร' },
+    { id: 'registry', label: 'ทะเบียน พนักงาน&ปฎิทิน', icon: CalendarDays, desc: 'ปฏิทิน, รายชื่อพนักงาน & สถิติ' },
     { id: 'settings', label: 'การตั้งค่าระบบ', icon: Settings, desc: 'นโยบาย & ข้อมูลสาธิต' },
   ] as const;
 
@@ -191,26 +206,47 @@ export default function App() {
             const Icon = item.icon;
             const isActive = activeMenu === item.id;
             return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveMenu(item.id);
-                  setIsMobileOpen(false); // Close mobile drawer
-                }}
-                className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 cursor-pointer ${
-                  isActive 
-                    ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-950/40' 
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
-                }`}
-              >
-                <Icon className={`w-5 h-5 mr-3.5 shrink-0 transition ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
-                <div className="min-w-0">
-                  <span className="text-xs tracking-wide block">{item.label}</span>
-                  <span className={`text-[9px] font-medium block leading-none mt-0.5 ${isActive ? 'text-rose-200' : 'text-slate-500'}`}>
-                    {item.desc}
-                  </span>
-                </div>
-              </button>
+              <React.Fragment key={item.id}>
+                <button
+                  onClick={() => {
+                    setActiveMenu(item.id);
+                    setIsMobileOpen(false); // Close mobile drawer
+                  }}
+                  className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 cursor-pointer ${
+                    isActive 
+                      ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-950/40' 
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 mr-3.5 shrink-0 transition ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                  <div className="min-w-0">
+                    <span className="text-xs tracking-wide block">{item.label}</span>
+                    <span className={`text-[9px] font-medium block leading-none mt-0.5 ${isActive ? 'text-rose-200' : 'text-slate-500'}`}>
+                      {item.desc}
+                    </span>
+                  </div>
+                </button>
+
+                {item.id === 'registry' && (
+                  <a
+                    href="https://pongsakul-aicalculate.onrender.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 cursor-pointer group no-underline decoration-none"
+                  >
+                    <Calculator className="w-5 h-5 mr-3.5 shrink-0 text-slate-400 group-hover:text-slate-200 transition" />
+                    <div className="min-w-0 flex-1 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs tracking-wide block">โปรแกรมคำนวณ</span>
+                        <span className="text-[9px] font-medium block leading-none mt-0.5 text-slate-500">
+                          เปิดระบบคำนวณและประมวลผล
+                        </span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-2" />
+                    </div>
+                  </a>
+                )}
+              </React.Fragment>
             );
           })}
         </nav>
@@ -250,32 +286,76 @@ export default function App() {
             </div>
           ) : (
             <>
-              {activeMenu === 'holidays' && (
-                <HolidayCalendar 
-                  employees={employees}
-                  holidays={holidays}
-                  onHolidaysChange={handleHolidaysChange}
-                />
-              )}
+              {activeMenu === 'registry' && (
+                <div className="space-y-6">
+                  {/* Beautiful Segmented Sub-navigation Tabs */}
+                  <div className="bg-white p-2 rounded-2xl border border-slate-100 shadow-3xs flex flex-wrap gap-1">
+                    <button
+                      onClick={() => setActiveSubTab('holidays')}
+                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeSubTab === 'holidays'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <CalendarDays className="w-4 h-4 shrink-0" />
+                      <span>ปฏิทินวันหยุด</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveSubTab('employees')}
+                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeSubTab === 'employees'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Users className="w-4 h-4 shrink-0" />
+                      <span>จัดการรายชื่อพนักงาน</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveSubTab('analytics')}
+                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeSubTab === 'analytics'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <BarChart3 className="w-4 h-4 shrink-0" />
+                      <span>แดชบอร์ด & สถิติ</span>
+                    </button>
+                  </div>
 
-              {activeMenu === 'employees' && (
-                <EmployeeSettings 
-                  employees={employees} 
-                  onEmployeesChange={handleEmployeesChange} 
-                />
-              )}
+                  {/* Render active sub-component */}
+                  {activeSubTab === 'holidays' && (
+                    <HolidayCalendar 
+                      employees={employees}
+                      holidays={holidays}
+                      onHolidaysChange={handleHolidaysChange}
+                    />
+                  )}
 
-              {activeMenu === 'analytics' && (
-                <AnalyticsDashboard 
-                  employees={employees}
-                  holidays={holidays}
-                />
+                  {activeSubTab === 'employees' && (
+                    <EmployeeSettings 
+                      employees={employees} 
+                      onEmployeesChange={handleEmployeesChange} 
+                    />
+                  )}
+
+                  {activeSubTab === 'analytics' && (
+                    <AnalyticsDashboard 
+                      employees={employees}
+                      holidays={holidays}
+                      leaveQuotas={leaveQuotas}
+                    />
+                  )}
+                </div>
               )}
 
               {activeMenu === 'settings' && (
                 <SystemSettings 
                   employees={employees}
                   holidays={holidays}
+                  leaveQuotas={leaveQuotas}
                   onEmployeesChange={handleEmployeesChange}
                   onHolidaysChange={handleHolidaysChange}
                 />
