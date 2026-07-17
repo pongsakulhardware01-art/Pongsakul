@@ -447,9 +447,22 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                     </span>
                     
                     {/* Tiny visual hover add icon */}
-                    <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition duration-150">
-                      <Plus className="w-4 h-4 text-rose-500 hover:scale-125" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDate(cell.dateString);
+                        handleOpenAddForm(cell.dateString);
+                      }}
+                      className={`hidden sm:flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 border border-transparent hover:border-rose-100 hover:scale-110 transition duration-150 cursor-pointer ${
+                        isSelected 
+                          ? 'opacity-100 text-rose-600 bg-rose-50/80 border-rose-200' 
+                          : 'opacity-0 group-hover:opacity-100 text-rose-500'
+                      }`}
+                      title="ยื่นใบลา / เพิ่มการหยุด สำหรับวันนี้"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Holiday listing space - Desktop */}

@@ -258,9 +258,16 @@ export default function App() {
             <span>เชื่อมต่อคลาวด์: Cloud Sync Active</span>
           </div>
           <p className="leading-relaxed">ข้อมูลทั้งหมดเชื่อมโยงแบบเรียลไทม์ผ่าน Firestore ผู้ใช้ทุกคนเห็นข้อมูลตรงกันทันที</p>
-          <div className="flex justify-between items-center pt-2 border-t border-slate-800/50 text-[9px]">
-            <span>Company Portal</span>
-            <span>v1.1.0</span>
+          <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/50 text-[9px]">
+            <div className="flex justify-between items-center text-slate-400">
+              <span className="font-semibold">เวอร์ชั่นระบบ (Version)</span>
+              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.4.0</span>
+            </div>
+            <div className="text-[8px] text-slate-600 mt-1 space-y-0.5">
+              <p>• รวมเมนูทะเบียน พนักงาน&ปฏิทิน</p>
+              <p>• เพิ่มปุ่มทางลัดคำนวณ & ลิงค์ภายนอก</p>
+              <p>• เพิ่มปุ่มปฏิทิน (+) กดเพื่อยื่นใบลาได้ทันที</p>
+            </div>
           </div>
         </div>
       </aside>
