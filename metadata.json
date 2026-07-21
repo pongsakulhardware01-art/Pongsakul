@@ -1,5 +1,5 @@
 {
-  "name": "Company Holiday Manager",
+  "name": "บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด",
   "description": "Internal employee holiday and configuration tool.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

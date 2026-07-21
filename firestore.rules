@@ -44,7 +44,7 @@ service cloud.firestore {
         && data.employeeId is string && data.employeeId.size() <= 128
         && data.startDate is string && data.startDate.size() <= 32
         && data.endDate is string && data.endDate.size() <= 32
-        && data.type is string && data.type in ['vacation', 'sick', 'personal', 'public_holiday', 'other']
+        && data.type is string && data.type in ['vacation', 'sick', 'personal', 'public_holiday', 'special_leave', 'other']
         && data.title is string && data.title.size() <= 200
         && (!data.keys().hasAny(['notes']) || (data.notes is string && data.notes.size() <= 1000))
         && (data.durationDays is int || data.durationDays is float);

@@ -18,7 +18,8 @@ import {
   CloudLightning,
   Loader2,
   Calculator,
-  ExternalLink
+  ExternalLink,
+  FileText
 } from 'lucide-react';
 import { Employee, HolidayLeave, LeaveQuotas } from './types';
 import {
@@ -228,23 +229,43 @@ export default function App() {
                 </button>
 
                 {item.id === 'registry' && (
-                  <a
-                    href="https://pongsakul-aicalculate.onrender.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 cursor-pointer group no-underline decoration-none"
-                  >
-                    <Calculator className="w-5 h-5 mr-3.5 shrink-0 text-slate-400 group-hover:text-slate-200 transition" />
-                    <div className="min-w-0 flex-1 flex items-center justify-between">
-                      <div>
-                        <span className="text-xs tracking-wide block">โปรแกรมคำนวณ</span>
-                        <span className="text-[9px] font-medium block leading-none mt-0.5 text-slate-500">
-                          เปิดระบบคำนวณและประมวลผล
-                        </span>
+                  <>
+                    <a
+                      href="https://pongsakul-aicalculate.onrender.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 cursor-pointer group no-underline decoration-none"
+                    >
+                      <Calculator className="w-5 h-5 mr-3.5 shrink-0 text-slate-400 group-hover:text-slate-200 transition" />
+                      <div className="min-w-0 flex-1 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs tracking-wide block">โปรแกรมคำนวณ</span>
+                          <span className="text-[9px] font-medium block leading-none mt-0.5 text-slate-500">
+                            เปิดระบบคำนวณและประมวลผล
+                          </span>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-2" />
                       </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-2" />
-                    </div>
-                  </a>
+                    </a>
+
+                    <a
+                      href="https://pongsakulpdf.onrender.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 cursor-pointer group no-underline decoration-none"
+                    >
+                      <FileText className="w-5 h-5 mr-3.5 shrink-0 text-slate-400 group-hover:text-slate-200 transition" />
+                      <div className="min-w-0 flex-1 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs tracking-wide block">แปลงไฟล์ PDF</span>
+                          <span className="text-[9px] font-medium block leading-none mt-0.5 text-slate-500">
+                            เปิดระบบเครื่องมือจัดการและแปลงไฟล์ PDF
+                          </span>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-2" />
+                      </div>
+                    </a>
+                  </>
                 )}
               </React.Fragment>
             );
@@ -261,9 +282,11 @@ export default function App() {
           <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/50 text-[9px]">
             <div className="flex justify-between items-center text-slate-400">
               <span className="font-semibold">เวอร์ชั่นระบบ (Version)</span>
-              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.4.0</span>
+              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.7.0</span>
             </div>
             <div className="text-[8px] text-slate-600 mt-1 space-y-0.5">
+              <p>• เพิ่มปุ่มทางลัด "แปลงไฟล์ PDF" ไปยัง pongsakulpdf.onrender.com</p>
+              <p>• เปลี่ยนชื่อแท็บระบบเป็น "บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด"</p>
               <p>• รวมเมนูทะเบียน พนักงาน&ปฏิทิน</p>
               <p>• เพิ่มปุ่มทางลัดคำนวณ & ลิงค์ภายนอก</p>
               <p>• เพิ่มปุ่มปฏิทิน (+) กดเพื่อยื่นใบลาได้ทันที</p>
