@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
+import { toJpeg } from 'html-to-image';
 import { Employee, HolidayLeave, HolidayType, LeaveQuotas } from '../types';
 import { 
   Users, 
@@ -16,7 +17,18 @@ import {
   Layers,
   Percent,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  FileText,
+  Building2,
+  UserCheck,
+  FileCheck2,
+  FileSpreadsheet,
+  Sparkles,
+  Loader2,
+  Calendar,
+  User,
+  ChevronRight
 } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
@@ -34,7 +46,139 @@ const TYPE_TRANSLATION: Record<HolidayType, { label: string; color: string; bg: 
   other: { label: 'อื่นๆ', color: 'text-purple-600', bg: 'bg-purple-500', border: 'border-purple-100' },
 };
 
+const LEAVE_TYPES_LIST: { type: HolidayType; label: string; bgColor: string; borderColor: string }[] = [
+  { type: 'vacation', label: 'ลาพักร้อน', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+  { type: 'sick', label: 'ลาป่วย', bgColor: 'bg-rose-50', borderColor: 'border-rose-200' },
+  { type: 'personal', label: 'ลากิจ', bgColor: 'bg-sky-50', borderColor: 'border-sky-200' },
+  { type: 'special_leave', label: 'วันลาหยุดพิเศษ', bgColor: 'bg-fuchsia-50', borderColor: 'border-fuchsia-200' },
+  { type: 'other', label: 'อื่นๆ', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' }
+];
+
 export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }: AnalyticsDashboardProps) {
+  const today = new Date();
+
+  // Individual Report State
+  const [reportEmpId, setReportEmpId] = useState<string>(employees[0]?.id || '');
+  const [reportMonth, setReportMonth] = useState<number>(today.getMonth());
+  const [reportYear, setReportYear] = useState<number>(today.getFullYear());
+  const [isExportingJpg, setIsExportingJpg] = useState(false);
+
+  const reportRef = useRef<HTMLDivElement>(null);
+  const reportSectionRef = useRef<HTMLDivElement>(null);
+
+  const THAI_MONTHS_FULL = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  const targetEmp = useMemo(() => {
+    return employees.find(e => e.id === reportEmpId) || employees[0];
+  }, [employees, reportEmpId]);
+
+  // Report calculations for target employee
+  const reportData = useMemo(() => {
+    if (!targetEmp) return null;
+
+    const empLeaves = holidays.filter(h => h.employeeId === targetEmp.id);
+
+    const ytdLeaves = empLeaves.filter(h => {
+      const year = parseInt(h.startDate.split('-')[0], 10);
+      return year === reportYear;
+    });
+
+    const monthlyLeaves = ytdLeaves.filter(h => {
+      const month = parseInt(h.startDate.split('-')[1], 10) - 1;
+      return month === reportMonth;
+    }).sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+    const monthlyTotalDays = monthlyLeaves.reduce((sum, h) => sum + h.durationDays, 0);
+
+    const monthTypeCounts: Record<HolidayType, number> = {
+      vacation: 0,
+      sick: 0,
+      personal: 0,
+      public_holiday: 0,
+      special_leave: 0,
+      other: 0,
+    };
+    monthlyLeaves.forEach(h => {
+      if (monthTypeCounts[h.type] !== undefined) {
+        monthTypeCounts[h.type] += h.durationDays;
+      }
+    });
+
+    const ytdTypeCounts: Record<HolidayType, number> = {
+      vacation: 0,
+      sick: 0,
+      personal: 0,
+      public_holiday: 0,
+      special_leave: 0,
+      other: 0,
+    };
+    ytdLeaves.forEach(h => {
+      if (ytdTypeCounts[h.type] !== undefined) {
+        ytdTypeCounts[h.type] += h.durationDays;
+      }
+    });
+
+    const remainingQuota = {
+      vacation: Math.max(0, leaveQuotas.vacation - ytdTypeCounts.vacation),
+      sick: Math.max(0, leaveQuotas.sick - ytdTypeCounts.sick),
+      personal: Math.max(0, leaveQuotas.personal - ytdTypeCounts.personal),
+      special_leave: Math.max(0, leaveQuotas.special_leave - ytdTypeCounts.special_leave),
+      other: Math.max(0, leaveQuotas.other - ytdTypeCounts.other),
+    };
+
+    return {
+      empLeaves,
+      ytdLeaves,
+      monthlyLeaves,
+      monthlyTotalDays,
+      monthTypeCounts,
+      ytdTypeCounts,
+      remainingQuota,
+    };
+  }, [targetEmp, holidays, reportMonth, reportYear, leaveQuotas]);
+
+  const handleExportReportJpg = async () => {
+    if (!reportRef.current || !targetEmp) return;
+    setIsExportingJpg(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 350));
+      const dataUrl = await toJpeg(reportRef.current, {
+        quality: 1.0,
+        pixelRatio: 2.5,
+        backgroundColor: '#ffffff',
+        style: {
+          transform: 'scale(1)',
+          borderRadius: '16px',
+        }
+      });
+
+      const monthName = THAI_MONTHS_FULL[reportMonth];
+      const thaiYear = reportYear + 543;
+      const empNameClean = `${targetEmp.firstName}_${targetEmp.lastName}`.replace(/\s+/g, '_');
+
+      const link = document.createElement('a');
+      link.download = `รายงานการลา_${empNameClean}_${monthName}_${thaiYear}.jpg`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting JPG report:', error);
+      alert('ไม่สามารถส่งออกภาพ JPG ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsExportingJpg(false);
+    }
+  };
+
+  const handleSelectEmployeeForReport = (empId: string) => {
+    setReportEmpId(empId);
+    if (reportSectionRef.current) {
+      reportSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
   
   // Basic Statistics Calculations
   const stats = useMemo(() => {
@@ -439,6 +583,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
                   <th className="py-3 px-2 text-center">ลาหยุดพิเศษ ({leaveQuotas.special_leave} วัน)</th>
                   <th className="py-3 px-2 text-center">อื่นๆ ({leaveQuotas.other} วัน)</th>
                   <th className="py-3 px-1 text-center">สถานะสิทธิ์</th>
+                  <th className="py-3 px-2 text-center">รายงาน JPG</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -566,11 +711,306 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
                           </span>
                         )}
                       </td>
+
+                      {/* Report Action Button */}
+                      <td className="py-3 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectEmployeeForReport(emp.id)}
+                          className="px-2.5 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
+                          title="ดู/สร้างรายงาน JPG รายบุคคล"
+                        >
+                          <FileText className="w-3 h-3 text-rose-600" />
+                          <span>รายงาน JPG</span>
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* Individual Monthly Report Generator Section */}
+      <div ref={reportSectionRef} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-rose-600" />
+              รายงานสรุปการลาหยุดงานรายบุคคลประจำเดือน (Individual Monthly Report)
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              เลือกพนักงานและประจำเดือน เพื่อสร้างรายงานสรุปพร้อมบันทึกเป็นรูปภาพ JPG สำหรับพิมพ์หรือส่งต่อ
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportReportJpg}
+            disabled={isExportingJpg || !targetEmp}
+            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer shrink-0 self-start md:self-auto"
+          >
+            {isExportingJpg ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>กำลังส่งออก JPG...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-white" />
+                <span>ดาวน์โหลดรายงานเป็น JPG</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 mb-1">เลือกพนักงาน (Employee)</label>
+            <select
+              value={reportEmpId}
+              onChange={(e) => setReportEmpId(e.target.value)}
+              className="w-full bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none cursor-pointer"
+            >
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''} - [{emp.employeeCode}] ({emp.department})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 mb-1">เลือกประจำเดือน (Month)</label>
+            <select
+              value={reportMonth}
+              onChange={(e) => setReportMonth(parseInt(e.target.value, 10))}
+              className="w-full bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none cursor-pointer"
+            >
+              {THAI_MONTHS_FULL.map((m, idx) => (
+                <option key={idx} value={idx}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 mb-1">เลือกปี (Year)</label>
+            <select
+              value={reportYear}
+              onChange={(e) => setReportYear(parseInt(e.target.value, 10))}
+              className="w-full bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none cursor-pointer"
+            >
+              {[today.getFullYear() - 2, today.getFullYear() - 1, today.getFullYear(), today.getFullYear() + 1].map(y => (
+                <option key={y} value={y}>พ.ศ. {y + 543} ({y})</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Printable Report Document Preview */}
+        {!targetEmp ? (
+          <div className="text-center py-10 text-xs text-slate-400">
+            โปรดเลือกพนักงานเพื่อแสดงตัวอย่างรายงาน
+          </div>
+        ) : (
+          <div className="overflow-x-auto pt-2 pb-4">
+            <div
+              ref={reportRef}
+              className="w-full min-w-[720px] max-w-4xl mx-auto bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 shadow-sm text-slate-800 space-y-6 font-sans"
+            >
+              {/* Report Letterhead Header */}
+              <div className="flex items-center justify-between border-b-2 border-rose-600 pb-5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white font-black flex items-center justify-center text-xl shadow-md shrink-0">
+                    PH
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</h2>
+                    <p className="text-xs font-bold text-rose-600">PONGSAKUL HARDWARE CO., LTD.</p>
+                    <p className="text-[11px] text-slate-500 font-medium">เอกสารสรุปสถิติการหยุดงานพนักงานประจำเดือน (Monthly Employee Leave Summary)</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">วันที่ออกรายงาน</span>
+                  <span className="text-xs font-bold text-slate-800 font-mono">
+                    {today.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Employee & Period Banner */}
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ข้อมูลพนักงาน (Employee Details)</div>
+                  <div className="text-base font-black text-slate-900">
+                    {targetEmp.firstName} {targetEmp.lastName} {targetEmp.nickname ? `(${targetEmp.nickname})` : ''}
+                  </div>
+                  <div className="text-xs text-slate-600 space-y-0.5 pt-0.5 font-medium">
+                    <p>รหัสพนักงาน: <strong className="font-mono text-slate-800">{targetEmp.employeeCode}</strong></p>
+                    <p>แผนก: <strong className="text-slate-800">{targetEmp.department}</strong> • ตำแหน่ง: <strong className="text-slate-800">{targetEmp.position}</strong></p>
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-right border-l border-slate-200 pl-5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ประจำรอบเดือน (Report Period)</div>
+                  <div className="text-lg font-black text-rose-700">
+                    เดือน{THAI_MONTHS_FULL[reportMonth]} พ.ศ. {reportYear + 543}
+                  </div>
+                  <div className="text-xs text-slate-600 font-medium">
+                    รวมวันลาในเดือนนี้: <strong className="text-slate-900 font-black text-sm">{reportData?.monthlyTotalDays || 0} วัน</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly Breakdown 5 Boxes */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-rose-600" />
+                  สรุปการหยุดงานแยกตามประเภท ประจำเดือน {THAI_MONTHS_FULL[reportMonth]}
+                </h4>
+                <div className="grid grid-cols-5 gap-2.5 text-center">
+                  {LEAVE_TYPES_LIST.map(item => {
+                    const days = reportData?.monthTypeCounts[item.type] || 0;
+                    return (
+                      <div key={item.type} className={`p-3 rounded-xl border ${item.borderColor} ${item.bgColor}`}>
+                        <span className="text-[10px] font-bold block text-slate-600 truncate">{item.label}</span>
+                        <span className="text-lg font-black block mt-0.5 text-slate-900">
+                          {days} <span className="text-[10px] text-slate-500 font-normal">วัน</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Cumulative YTD Quotas Table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-rose-600" />
+                  สรุปสิทธิ์วันลาคงเหลือสะสมประจำปี พ.ศ. {reportYear + 543}
+                </h4>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[10px]">
+                        <th className="py-2.5 px-3">ประเภทการลา</th>
+                        <th className="py-2.5 px-3 text-center">สิทธิ์ตามโควตา</th>
+                        <th className="py-2.5 px-3 text-center">ใช้ในเดือนนี้</th>
+                        <th className="py-2.5 px-3 text-center">ใช้สะสมทั้งปี ({reportYear + 543})</th>
+                        <th className="py-2.5 px-3 text-center">สิทธิ์คงเหลือ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-white">
+                      {LEAVE_TYPES_LIST.map(item => {
+                        const totalQuota = leaveQuotas[item.type as keyof LeaveQuotas] || 0;
+                        const usedMonth = reportData?.monthTypeCounts[item.type] || 0;
+                        const usedYtd = reportData?.ytdTypeCounts[item.type] || 0;
+                        const remain = reportData?.remainingQuota[item.type as keyof typeof reportData.remainingQuota] || 0;
+                        const isExceeded = usedYtd > totalQuota;
+
+                        return (
+                          <tr key={item.type}>
+                            <td className="py-2.5 px-3 font-semibold text-slate-800">{item.label}</td>
+                            <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-700">{totalQuota} วัน</td>
+                            <td className="py-2.5 px-3 text-center font-mono font-bold text-rose-600">{usedMonth} วัน</td>
+                            <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">{usedYtd} วัน</td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full inline-block ${
+                                isExceeded 
+                                  ? 'bg-rose-100 text-rose-700' 
+                                  : remain === 0 
+                                    ? 'bg-slate-100 text-slate-500' 
+                                    : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {isExceeded ? 'เกินสิทธิ์ ❌' : `เหลือ ${remain} วัน`}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Detailed Monthly Leaves Table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <CalendarDays className="w-4 h-4 text-rose-600" />
+                  ประวัติใบลาในเดือน{THAI_MONTHS_FULL[reportMonth]} ({reportData?.monthlyLeaves.length || 0} รายการ)
+                </h4>
+                {(!reportData?.monthlyLeaves || reportData.monthlyLeaves.length === 0) ? (
+                  <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-xl font-medium">
+                    ไม่มีประวัติการหยุดงานในเดือน {THAI_MONTHS_FULL[reportMonth]} พ.ศ. {reportYear + 543}
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[10px]">
+                          <th className="py-2.5 px-2 text-center w-8">#</th>
+                          <th className="py-2.5 px-3">ช่วงวันที่หยุด</th>
+                          <th className="py-2.5 px-2 text-center">ประเภท</th>
+                          <th className="py-2.5 px-2 text-center">จำนวน</th>
+                          <th className="py-2.5 px-3">เหตุผลการลา</th>
+                          <th className="py-2.5 px-3">หมายเหตุ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {reportData.monthlyLeaves.map((h, idx) => (
+                          <tr key={h.id}>
+                            <td className="py-2.5 px-2 text-center font-mono text-slate-400 text-[11px]">{idx + 1}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-800 font-mono text-[11px]">
+                              {h.startDate === h.endDate ? h.startDate : `${h.startDate} ถึง ${h.endDate}`}
+                            </td>
+                            <td className="py-2.5 px-2 text-center">
+                              <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-100 text-slate-800">
+                                {TYPE_TRANSLATION[h.type]?.label || h.type}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2 text-center font-black text-rose-700">{h.durationDays} วัน</td>
+                            <td className="py-2.5 px-3 font-medium text-slate-800">{h.title}</td>
+                            <td className="py-2.5 px-3 text-slate-500 text-[11px]">{h.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Signature Block */}
+              <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-8 text-center text-xs">
+                <div className="space-y-6 p-4 border border-dashed border-slate-300 rounded-xl bg-slate-50/50">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ลงชื่อพนักงานผู้ยื่นใบลา</span>
+                  <div className="pt-6 border-b border-slate-400 w-3/4 mx-auto"></div>
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-slate-800">({targetEmp.firstName} {targetEmp.lastName})</p>
+                    <p className="text-[10px] text-slate-500">ตำแหน่ง: {targetEmp.position}</p>
+                    <p className="text-[10px] text-slate-400 pt-1">วันที่: ...... / ...... / ..........</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6 p-4 border border-dashed border-slate-300 rounded-xl bg-slate-50/50">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ลงชื่อผู้บังคับบัญชา / ฝ่ายบุคคล (HR)</span>
+                  <div className="pt-6 border-b border-slate-400 w-3/4 mx-auto"></div>
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-slate-800">( ........................................................... )</p>
+                    <p className="text-[10px] text-slate-500">ผู้อนุมัติ / ฝ่ายทรัพยากรบุคคล</p>
+                    <p className="text-[10px] text-slate-400 pt-1">วันที่: ...... / ...... / ..........</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Footer */}
+              <div className="flex justify-between items-center text-[9px] text-slate-400 pt-3 border-t border-slate-100 font-mono">
+                <span>เอกสารออกโดยระบบ บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</span>
+                <span>INTERNAL REPORT • CONFIDENTIAL</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

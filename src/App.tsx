@@ -282,14 +282,13 @@ export default function App() {
           <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/50 text-[9px]">
             <div className="flex justify-between items-center text-slate-400">
               <span className="font-semibold">เวอร์ชั่นระบบ (Version)</span>
-              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.7.0</span>
+              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.8.0</span>
             </div>
             <div className="text-[8px] text-slate-600 mt-1 space-y-0.5">
+              <p>• เพิ่มระบบออกรายงานสรุปการลาหยุดรายบุคคลประจำเดือน บันทึกเป็นรูปภาพ JPG</p>
               <p>• เพิ่มปุ่มทางลัด "แปลงไฟล์ PDF" ไปยัง pongsakulpdf.onrender.com</p>
               <p>• เปลี่ยนชื่อแท็บระบบเป็น "บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด"</p>
-              <p>• รวมเมนูทะเบียน พนักงาน&ปฏิทิน</p>
-              <p>• เพิ่มปุ่มทางลัดคำนวณ & ลิงค์ภายนอก</p>
-              <p>• เพิ่มปุ่มปฏิทิน (+) กดเพื่อยื่นใบลาได้ทันที</p>
+              <p>• รองรับประเภทวันลาหยุดพิเศษและการล่วงหน้า</p>
             </div>
           </div>
         </div>
