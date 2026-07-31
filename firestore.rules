@@ -52,9 +52,14 @@ service cloud.firestore {
 
     function isValidSettings(data) {
       return data.keys().hasAll(['companyName', 'weekendType'])
-        && data.keys().size() == 2
+        && data.keys().size() <= 10
         && data.companyName is string && data.companyName.size() <= 200
-        && data.weekendType is string && data.weekendType.size() <= 50;
+        && data.weekendType is string && data.weekendType.size() <= 50
+        && (!data.keys().hasAny(['vacationQuota']) || (data.vacationQuota is int || data.vacationQuota is float))
+        && (!data.keys().hasAny(['sickQuota']) || (data.sickQuota is int || data.sickQuota is float))
+        && (!data.keys().hasAny(['personalQuota']) || (data.personalQuota is int || data.personalQuota is float))
+        && (!data.keys().hasAny(['specialQuota']) || (data.specialQuota is int || data.specialQuota is float))
+        && (!data.keys().hasAny(['otherQuota']) || (data.otherQuota is int || data.otherQuota is float));
     }
 
     // Collection routing and rule mappings

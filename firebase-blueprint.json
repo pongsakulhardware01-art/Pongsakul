@@ -41,7 +41,12 @@
       "type": "object",
       "properties": {
         "companyName": { "type": "string", "description": "Name of the company/store" },
-        "weekendType": { "type": "string", "description": "Weekend days configuration (e.g. sat-sun)" }
+        "weekendType": { "type": "string", "description": "Weekend days configuration (e.g. sat-sun)" },
+        "vacationQuota": { "type": "integer", "description": "Annual vacation leave quota" },
+        "sickQuota": { "type": "integer", "description": "Annual sick leave quota" },
+        "personalQuota": { "type": "integer", "description": "Annual personal leave quota" },
+        "specialQuota": { "type": "integer", "description": "Annual special leave quota" },
+        "otherQuota": { "type": "integer", "description": "Annual other leave quota" }
       },
       "required": ["companyName", "weekendType"]
     }
