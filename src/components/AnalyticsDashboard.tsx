@@ -145,12 +145,22 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
     setIsExportingJpg(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 350));
-      const dataUrl = await toJpeg(reportRef.current, {
-        quality: 1.0,
+      const node = reportRef.current;
+      const targetWidth = node.scrollWidth || 800;
+      const targetHeight = node.scrollHeight;
+
+      const dataUrl = await toJpeg(node, {
+        quality: 0.98,
         pixelRatio: 2.5,
+        width: targetWidth,
+        height: targetHeight,
         backgroundColor: '#ffffff',
         style: {
-          transform: 'scale(1)',
+          transform: 'none',
+          width: `${targetWidth}px`,
+          height: `${targetHeight}px`,
+          maxWidth: 'none',
+          minWidth: `${targetWidth}px`,
           borderRadius: '16px',
         }
       });
@@ -816,10 +826,10 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
             โปรดเลือกพนักงานเพื่อแสดงตัวอย่างรายงาน
           </div>
         ) : (
-          <div className="overflow-x-auto pt-2 pb-4">
+          <div className="overflow-x-auto pt-2 pb-4 flex justify-center">
             <div
               ref={reportRef}
-              className="w-full min-w-[720px] max-w-4xl mx-auto bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 shadow-sm text-slate-800 space-y-6 font-sans"
+              className="w-[820px] shrink-0 bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 shadow-sm text-slate-800 space-y-6 font-sans mx-auto"
             >
               {/* Report Letterhead Header */}
               <div className="flex items-center justify-between border-b-2 border-rose-600 pb-5">
@@ -876,7 +886,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
                     const days = reportData?.monthTypeCounts[item.type] || 0;
                     return (
                       <div key={item.type} className={`p-3 rounded-xl border ${item.borderColor} ${item.bgColor}`}>
-                        <span className="text-[10px] font-bold block text-slate-600 truncate">{item.label}</span>
+                        <span className="text-[10px] font-bold block text-slate-600 whitespace-nowrap">{item.label}</span>
                         <span className="text-lg font-black block mt-0.5 text-slate-900">
                           {days} <span className="text-[10px] text-slate-500 font-normal">วัน</span>
                         </span>
