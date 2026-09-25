@@ -166,22 +166,29 @@ export default function App() {
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased font-sans flex flex-col lg:flex-row">
       
       {/* 📱 Mobile Top Header */}
-      <header className="lg:hidden bg-slate-900 text-white px-5 h-16 flex items-center justify-between sticky top-0 z-40 shadow-md">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-rose-600/10 flex items-center justify-center">
-            <CalendarDays className="w-5.5 h-5.5 text-rose-400" />
+      <header className="lg:hidden bg-slate-900 text-white px-4 h-14 flex items-center justify-between sticky top-0 z-40 shadow-md">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-4.5 h-4.5 text-white" />
           </div>
-          <div>
-            <h1 className="text-xs font-bold leading-tight font-sans text-white">{companyName}</h1>
+          <div className="min-w-0">
+            <h1 className="text-xs font-bold leading-tight font-sans text-white truncate max-w-[190px] sm:max-w-xs">{companyName}</h1>
+            <div className="flex items-center gap-1 mt-0.5 text-[9px] text-emerald-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Cloud Sync</span>
+            </div>
           </div>
         </div>
 
-        <button 
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-1.5 rounded-lg hover:bg-white/10 text-white transition focus:outline-none cursor-pointer"
-        >
-          {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button 
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            className="p-2 rounded-lg hover:bg-white/10 text-white transition focus:outline-none cursor-pointer flex items-center gap-1 text-xs"
+            aria-label="เมนูเพิ่มเติม"
+          >
+            {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </header>
 
       {/* 💻 Responsive Sidebar Container (Desktop Sidebar / Mobile Drawer Overlay) */}
@@ -303,8 +310,8 @@ export default function App() {
       )}
 
       {/* 🖥️ Main Viewport Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
-        <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
+      <main className="flex-1 flex flex-col min-w-0 relative pb-20 lg:pb-0">
+        <div className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-5 sm:space-y-6">
           
           {/* Active View Router */}
           {isLoading ? (
@@ -316,12 +323,12 @@ export default function App() {
           ) : (
             <>
               {activeMenu === 'registry' && (
-                <div className="space-y-6">
-                  {/* Beautiful Segmented Sub-navigation Tabs */}
-                  <div className="bg-white p-2 rounded-2xl border border-slate-100 shadow-3xs flex flex-wrap gap-1">
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Segmented Sub-navigation Tabs (Desktop & Tablet) */}
+                  <div className="bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-100 shadow-3xs flex gap-1 overflow-x-auto scrollbar-none">
                     <button
                       onClick={() => setActiveSubTab('holidays')}
-                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                      className={`flex-1 min-w-[105px] sm:min-w-[120px] flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap ${
                         activeSubTab === 'holidays'
                           ? 'bg-rose-600 text-white shadow-sm'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -332,18 +339,18 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setActiveSubTab('employees')}
-                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                      className={`flex-1 min-w-[105px] sm:min-w-[120px] flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap ${
                         activeSubTab === 'employees'
                           ? 'bg-rose-600 text-white shadow-sm'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
                       <Users className="w-4 h-4 shrink-0" />
-                      <span>จัดการรายชื่อพนักงาน</span>
+                      <span>จัดการพนักงาน</span>
                     </button>
                     <button
                       onClick={() => setActiveSubTab('analytics')}
-                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                      className={`flex-1 min-w-[105px] sm:min-w-[120px] flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap ${
                         activeSubTab === 'analytics'
                           ? 'bg-rose-600 text-white shadow-sm'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -395,7 +402,7 @@ export default function App() {
         </div>
 
         {/* Global Footer */}
-        <footer className="bg-white border-t border-slate-200/60 py-4.5 text-center mt-auto">
+        <footer className="bg-white border-t border-slate-200/60 py-4 text-center mt-auto hidden sm:block">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-[11px] text-slate-400 font-medium flex flex-col sm:flex-row justify-between items-center gap-2">
             <p>© 2026 {companyName}. สงวนลิขสิทธิ์ทั้งหมดตามกฎหมายองค์กร</p>
             <div className="flex items-center gap-1.5">
@@ -405,6 +412,72 @@ export default function App() {
           </div>
         </footer>
       </main>
+
+      {/* 📱 Mobile Fixed Bottom Navigation Bar (Ergonomic Thumb Zone) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-2 py-1 flex items-center justify-around">
+        <button
+          onClick={() => {
+            setActiveMenu('registry');
+            setActiveSubTab('holidays');
+            setIsMobileOpen(false);
+          }}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center py-1 px-1 rounded-xl transition cursor-pointer ${
+            activeMenu === 'registry' && activeSubTab === 'holidays'
+              ? 'text-rose-600 font-bold'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <CalendarDays className={`w-5 h-5 mb-0.5 ${activeMenu === 'registry' && activeSubTab === 'holidays' ? 'text-rose-600' : 'text-slate-400'}`} />
+          <span className="text-[10px] leading-tight">ปฏิทิน</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveMenu('registry');
+            setActiveSubTab('employees');
+            setIsMobileOpen(false);
+          }}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center py-1 px-1 rounded-xl transition cursor-pointer ${
+            activeMenu === 'registry' && activeSubTab === 'employees'
+              ? 'text-rose-600 font-bold'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Users className={`w-5 h-5 mb-0.5 ${activeMenu === 'registry' && activeSubTab === 'employees' ? 'text-rose-600' : 'text-slate-400'}`} />
+          <span className="text-[10px] leading-tight">พนักงาน</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveMenu('registry');
+            setActiveSubTab('analytics');
+            setIsMobileOpen(false);
+          }}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center py-1 px-1 rounded-xl transition cursor-pointer ${
+            activeMenu === 'registry' && activeSubTab === 'analytics'
+              ? 'text-rose-600 font-bold'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <BarChart3 className={`w-5 h-5 mb-0.5 ${activeMenu === 'registry' && activeSubTab === 'analytics' ? 'text-rose-600' : 'text-slate-400'}`} />
+          <span className="text-[10px] leading-tight">สถิติ/รายงาน</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveMenu('settings');
+            setIsMobileOpen(false);
+          }}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center py-1 px-1 rounded-xl transition cursor-pointer ${
+            activeMenu === 'settings'
+              ? 'text-rose-600 font-bold'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Settings className={`w-5 h-5 mb-0.5 ${activeMenu === 'settings' ? 'text-rose-600' : 'text-slate-400'}`} />
+          <span className="text-[10px] leading-tight">ตั้งค่าระบบ</span>
+        </button>
+      </nav>
 
     </div>
   );

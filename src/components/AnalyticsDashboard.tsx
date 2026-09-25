@@ -65,6 +65,26 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
 
   const reportRef = useRef<HTMLDivElement>(null);
   const reportSectionRef = useRef<HTMLDivElement>(null);
+  const reportContainerRef = useRef<HTMLDivElement>(null);
+  const [mobileFitMode, setMobileFitMode] = useState(true);
+  const [previewScale, setPreviewScale] = useState(1);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (reportContainerRef.current) {
+        const containerWidth = reportContainerRef.current.clientWidth;
+        if (containerWidth < 830) {
+          const scale = Math.max(0.35, Math.min(1, (containerWidth - 8) / 820));
+          setPreviewScale(scale);
+        } else {
+          setPreviewScale(1);
+        }
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [reportEmpId, reportMonth, reportYear, mobileFitMode]);
 
   const THAI_MONTHS_FULL = [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -146,7 +166,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
     try {
       await new Promise(resolve => setTimeout(resolve, 350));
       const node = reportRef.current;
-      const targetWidth = node.scrollWidth || 800;
+      const targetWidth = 820;
       const targetHeight = node.scrollHeight;
 
       const dataUrl = await toJpeg(node, {
@@ -582,164 +602,257 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
             ยังไม่มีรายชื่อพนักงานในระบบ
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-1">พนักงาน</th>
-                  <th className="py-3 px-2 text-center">ลาพักร้อน ({leaveQuotas.vacation} วัน)</th>
-                  <th className="py-3 px-2 text-center">ลาป่วย ({leaveQuotas.sick} วัน)</th>
-                  <th className="py-3 px-2 text-center">ลากิจ ({leaveQuotas.personal} วัน)</th>
-                  <th className="py-3 px-2 text-center">ลาหยุดพิเศษ ({leaveQuotas.special_leave} วัน)</th>
-                  <th className="py-3 px-2 text-center">อื่นๆ ({leaveQuotas.other} วัน)</th>
-                  <th className="py-3 px-1 text-center">สถานะสิทธิ์</th>
-                  <th className="py-3 px-2 text-center">รายงาน JPG</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {stats.employeeLeaveSummary.map((summary) => {
-                  const emp = summary.employee;
-                  return (
-                    <tr key={emp.id} className="hover:bg-slate-50/50 transition">
-                      <td className="py-3 px-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center uppercase shrink-0">
-                            {emp.firstName.slice(0, 1)}
+          <>
+            {/* 📱 Mobile Card List View (Screen < md) */}
+            <div className="block md:hidden space-y-3">
+              {stats.employeeLeaveSummary.map((summary) => {
+                const emp = summary.employee;
+                return (
+                  <div key={emp.id} className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3 shadow-3xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-800 font-black text-sm flex items-center justify-center shrink-0 shadow-3xs">
+                          {emp.firstName.slice(0, 1)}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-sm font-bold text-slate-900 block truncate">
+                            {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-medium block truncate">
+                            {emp.employeeCode} • {emp.position}
+                          </span>
+                        </div>
+                      </div>
+                      {summary.hasAnyExceeded ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg shrink-0">
+                          <AlertTriangle className="w-3 h-3 text-rose-500" />
+                          เกินโควตา
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          มีสิทธิ์คงเหลือ
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quota Chips Grid */}
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                      <div className="bg-white p-2 rounded-xl border border-slate-150">
+                        <span className="text-[10px] text-slate-400 font-bold block">ลาพักร้อน ({leaveQuotas.vacation} วัน)</span>
+                        <div className="flex items-baseline justify-between mt-0.5">
+                          <span className="font-bold text-slate-800">{summary.used.vacation} วัน</span>
+                          <span className={`text-[10px] font-bold ${summary.exceeded.vacation ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {summary.exceeded.vacation ? 'เกิน!' : `เหลือ ${summary.remain.vacation}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-2 rounded-xl border border-slate-150">
+                        <span className="text-[10px] text-slate-400 font-bold block">ลาป่วย ({leaveQuotas.sick} วัน)</span>
+                        <div className="flex items-baseline justify-between mt-0.5">
+                          <span className="font-bold text-slate-800">{summary.used.sick} วัน</span>
+                          <span className={`text-[10px] font-bold ${summary.exceeded.sick ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {summary.exceeded.sick ? 'เกิน!' : `เหลือ ${summary.remain.sick}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-2 rounded-xl border border-slate-150">
+                        <span className="text-[10px] text-slate-400 font-bold block">ลากิจ ({leaveQuotas.personal} วัน)</span>
+                        <div className="flex items-baseline justify-between mt-0.5">
+                          <span className="font-bold text-slate-800">{summary.used.personal} วัน</span>
+                          <span className={`text-[10px] font-bold ${summary.exceeded.personal ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {summary.exceeded.personal ? 'เกิน!' : `เหลือ ${summary.remain.personal}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-2 rounded-xl border border-slate-150">
+                        <span className="text-[10px] text-slate-400 font-bold block">หยุดพิเศษ ({leaveQuotas.special_leave} วัน)</span>
+                        <div className="flex items-baseline justify-between mt-0.5">
+                          <span className="font-bold text-slate-800">{summary.used.special_leave} วัน</span>
+                          <span className={`text-[10px] font-bold ${summary.exceeded.special_leave ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {summary.exceeded.special_leave ? 'เกิน!' : `เหลือ ${summary.remain.special_leave}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleSelectEmployeeForReport(emp.id)}
+                      className="w-full py-2.5 px-3 bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-3xs cursor-pointer min-h-[44px]"
+                    >
+                      <FileText className="w-4 h-4 text-rose-600" />
+                      <span>สร้างรายงานสรุปรายบุคคล (JPG)</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 💻 Desktop/Tablet Table (Screen >= md) */}
+            <div className="hidden md:block overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">
+                    <th className="py-3 px-1">พนักงาน</th>
+                    <th className="py-3 px-2 text-center">ลาพักร้อน ({leaveQuotas.vacation} วัน)</th>
+                    <th className="py-3 px-2 text-center">ลาป่วย ({leaveQuotas.sick} วัน)</th>
+                    <th className="py-3 px-2 text-center">ลากิจ ({leaveQuotas.personal} วัน)</th>
+                    <th className="py-3 px-2 text-center">ลาหยุดพิเศษ ({leaveQuotas.special_leave} วัน)</th>
+                    <th className="py-3 px-2 text-center">อื่นๆ ({leaveQuotas.other} วัน)</th>
+                    <th className="py-3 px-1 text-center">สถานะสิทธิ์</th>
+                    <th className="py-3 px-2 text-center">รายงาน JPG</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {stats.employeeLeaveSummary.map((summary) => {
+                    const emp = summary.employee;
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50/50 transition">
+                        <td className="py-3 px-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center uppercase shrink-0">
+                              {emp.firstName.slice(0, 1)}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-slate-800 block truncate">
+                                {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block truncate font-mono">
+                                {emp.employeeCode} • {emp.position}
+                              </span>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-slate-800 block truncate">
-                              {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''}
+                        </td>
+                        
+                        {/* Vacation */}
+                        <td className="py-3 px-2 text-center">
+                          <div className="inline-block">
+                            <span className="text-xs font-black block text-slate-800">
+                              {summary.used.vacation} / {leaveQuotas.vacation} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
                             </span>
-                            <span className="text-[10px] text-slate-400 block truncate font-mono">
-                              {emp.employeeCode} • {emp.position}
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                              summary.exceeded.vacation 
+                                ? 'bg-rose-50 text-rose-600' 
+                                : summary.remain.vacation === 0 
+                                  ? 'bg-slate-50 text-slate-400' 
+                                  : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                              {summary.exceeded.vacation ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.vacation} วัน`}
                             </span>
                           </div>
-                        </div>
-                      </td>
-                      
-                      {/* Vacation */}
-                      <td className="py-3 px-2 text-center">
-                        <div className="inline-block">
-                          <span className="text-xs font-black block text-slate-800">
-                            {summary.used.vacation} / {leaveQuotas.vacation} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
-                          </span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
-                            summary.exceeded.vacation 
-                              ? 'bg-rose-50 text-rose-600' 
-                              : summary.remain.vacation === 0 
-                                ? 'bg-slate-50 text-slate-400' 
-                                : 'bg-emerald-50 text-emerald-600'
-                          }`}>
-                            {summary.exceeded.vacation ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.vacation} วัน`}
-                          </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Sick */}
-                      <td className="py-3 px-2 text-center">
-                        <div className="inline-block">
-                          <span className="text-xs font-black block text-slate-800">
-                            {summary.used.sick} / {leaveQuotas.sick} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
-                          </span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
-                            summary.exceeded.sick 
-                              ? 'bg-rose-50 text-rose-600' 
-                              : summary.remain.sick === 0 
-                                ? 'bg-slate-50 text-slate-400' 
-                                : 'bg-emerald-50 text-emerald-600'
-                          }`}>
-                            {summary.exceeded.sick ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.sick} วัน`}
-                          </span>
-                        </div>
-                      </td>
+                        {/* Sick */}
+                        <td className="py-3 px-2 text-center">
+                          <div className="inline-block">
+                            <span className="text-xs font-black block text-slate-800">
+                              {summary.used.sick} / {leaveQuotas.sick} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                            </span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                              summary.exceeded.sick 
+                                ? 'bg-rose-50 text-rose-600' 
+                                : summary.remain.sick === 0 
+                                  ? 'bg-slate-50 text-slate-400' 
+                                  : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                              {summary.exceeded.sick ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.sick} วัน`}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Personal */}
-                      <td className="py-3 px-2 text-center">
-                        <div className="inline-block">
-                          <span className="text-xs font-black block text-slate-800">
-                            {summary.used.personal} / {leaveQuotas.personal} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
-                          </span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
-                            summary.exceeded.personal 
-                              ? 'bg-rose-50 text-rose-600' 
-                              : summary.remain.personal === 0 
-                                ? 'bg-slate-50 text-slate-400' 
-                                : 'bg-emerald-50 text-emerald-600'
-                          }`}>
-                            {summary.exceeded.personal ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.personal} วัน`}
-                          </span>
-                        </div>
-                      </td>
+                        {/* Personal */}
+                        <td className="py-3 px-2 text-center">
+                          <div className="inline-block">
+                            <span className="text-xs font-black block text-slate-800">
+                              {summary.used.personal} / {leaveQuotas.personal} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                            </span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                              summary.exceeded.personal 
+                                ? 'bg-rose-50 text-rose-600' 
+                                : summary.remain.personal === 0 
+                                  ? 'bg-slate-50 text-slate-400' 
+                                  : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                              {summary.exceeded.personal ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.personal} วัน`}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Special Leave */}
-                      <td className="py-3 px-2 text-center">
-                        <div className="inline-block">
-                          <span className="text-xs font-black block text-slate-800">
-                            {summary.used.special_leave} / {leaveQuotas.special_leave} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
-                          </span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
-                            summary.exceeded.special_leave 
-                              ? 'bg-rose-50 text-rose-600' 
-                              : summary.remain.special_leave === 0 
-                                ? 'bg-slate-50 text-slate-400' 
-                                : 'bg-emerald-50 text-emerald-600'
-                          }`}>
-                            {summary.exceeded.special_leave ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.special_leave} วัน`}
-                          </span>
-                        </div>
-                      </td>
+                        {/* Special Leave */}
+                        <td className="py-3 px-2 text-center">
+                          <div className="inline-block">
+                            <span className="text-xs font-black block text-slate-800">
+                              {summary.used.special_leave} / {leaveQuotas.special_leave} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                            </span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                              summary.exceeded.special_leave 
+                                ? 'bg-rose-50 text-rose-600' 
+                                : summary.remain.special_leave === 0 
+                                  ? 'bg-slate-50 text-slate-400' 
+                                  : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                              {summary.exceeded.special_leave ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.special_leave} วัน`}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Other */}
-                      <td className="py-3 px-2 text-center">
-                        <div className="inline-block">
-                          <span className="text-xs font-black block text-slate-800">
-                            {summary.used.other} / {leaveQuotas.other} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
-                          </span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
-                            summary.exceeded.other 
-                              ? 'bg-rose-50 text-rose-600' 
-                              : summary.remain.other === 0 
-                                ? 'bg-slate-50 text-slate-400' 
-                                : 'bg-emerald-50 text-emerald-600'
-                          }`}>
-                            {summary.exceeded.other ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.other} วัน`}
-                          </span>
-                        </div>
-                      </td>
+                        {/* Other */}
+                        <td className="py-3 px-2 text-center">
+                          <div className="inline-block">
+                            <span className="text-xs font-black block text-slate-800">
+                              {summary.used.other} / {leaveQuotas.other} <span className="text-[10px] text-slate-400 font-medium">วัน</span>
+                            </span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                              summary.exceeded.other 
+                                ? 'bg-rose-50 text-rose-600' 
+                                : summary.remain.other === 0 
+                                  ? 'bg-slate-50 text-slate-400' 
+                                  : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                              {summary.exceeded.other ? 'เกินสิทธิ์ ❌' : `เหลือ ${summary.remain.other} วัน`}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* Overall Status */}
-                      <td className="py-3 px-1 text-center">
-                        {summary.hasAnyExceeded ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md">
-                            <AlertTriangle className="w-3 h-3 text-rose-500" />
-                            เกินโควตา ⚠️
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                            มีสิทธิ์คงเหลือ
-                          </span>
-                        )}
-                      </td>
+                        {/* Overall Status */}
+                        <td className="py-3 px-1 text-center">
+                          {summary.hasAnyExceeded ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md">
+                              <AlertTriangle className="w-3 h-3 text-rose-500" />
+                              เกินโควตา ⚠️
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              มีสิทธิ์คงเหลือ
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Report Action Button */}
-                      <td className="py-3 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectEmployeeForReport(emp.id)}
-                          className="px-2.5 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
-                          title="ดู/สร้างรายงาน JPG รายบุคคล"
-                        >
-                          <FileText className="w-3 h-3 text-rose-600" />
-                          <span>รายงาน JPG</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {/* Report Action Button */}
+                        <td className="py-3 px-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectEmployeeForReport(emp.id)}
+                            className="px-2.5 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
+                            title="ดู/สร้างรายงาน JPG รายบุคคล"
+                          >
+                            <FileText className="w-3 h-3 text-rose-600" />
+                            <span>รายงาน JPG</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -826,11 +939,52 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
             โปรดเลือกพนักงานเพื่อแสดงตัวอย่างรายงาน
           </div>
         ) : (
-          <div className="overflow-x-auto pt-2 pb-4 flex justify-center">
+          <div ref={reportContainerRef} className="w-full pt-2 pb-4">
+            {/* 📱 Mobile Scale/View Mode Toggle (Screen < md) */}
+            <div className="flex md:hidden items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 mb-3">
+              <span className="text-[11px] font-bold text-slate-600">มุมมองตัวอย่าง:</span>
+              <div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setMobileFitMode(true)}
+                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold transition cursor-pointer ${
+                    mobileFitMode 
+                      ? 'bg-rose-600 text-white shadow-3xs' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📱 พอดีหน้าจอ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileFitMode(false)}
+                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold transition cursor-pointer ${
+                    !mobileFitMode 
+                      ? 'bg-rose-600 text-white shadow-3xs' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🔍 ขนาดจริง 100%
+                </button>
+              </div>
+            </div>
+
             <div
-              ref={reportRef}
-              className="w-[820px] shrink-0 bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 shadow-sm text-slate-800 space-y-6 font-sans mx-auto"
+              className={`w-full flex justify-center ${!mobileFitMode ? 'overflow-x-auto pb-4' : 'overflow-hidden'}`}
+              style={{
+                height: (mobileFitMode && previewScale < 1 && reportRef.current) 
+                  ? `${reportRef.current.offsetHeight * previewScale + 8}px` 
+                  : 'auto'
+              }}
             >
+              <div
+                ref={reportRef}
+                style={{
+                  transform: (mobileFitMode && previewScale < 1) ? `scale(${previewScale})` : 'none',
+                  transformOrigin: 'top center',
+                }}
+                className="w-[820px] shrink-0 bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 shadow-sm text-slate-800 space-y-6 font-sans mx-auto"
+              >
               {/* Report Letterhead Header */}
               <div className="flex items-center justify-between border-b-2 border-rose-600 pb-5">
                 <div className="flex items-center gap-3.5">
@@ -1022,6 +1176,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
               </div>
             </div>
           </div>
+        </div>
         )}
       </div>
 

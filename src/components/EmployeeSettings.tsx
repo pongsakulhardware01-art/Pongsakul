@@ -290,11 +290,11 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
           </h2>
           <p className="text-sm text-slate-500 mt-1">จัดการข้อมูลรายชื่อ พนักงาน ตำแหน่ง แผนก และสถานะปฏิบัติงาน</p>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap gap-2.5">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2.5 w-full sm:w-auto">
           <button
             id="btn-toggle-import-export"
             onClick={() => setIsImportExportOpen(!isImportExportOpen)}
-            className={`inline-flex items-center justify-center px-4 py-2.5 border text-sm font-semibold rounded-xl transition shadow-sm cursor-pointer ${
+            className={`inline-flex items-center justify-center flex-1 sm:flex-initial px-4 py-2.5 border text-sm font-semibold rounded-xl transition shadow-sm cursor-pointer min-h-[44px] ${
               isImportExportOpen 
                 ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800' 
                 : 'bg-white hover:bg-gray-50 border-slate-200 text-slate-700'
@@ -307,7 +307,7 @@ export default function EmployeeSettings({ employees, onEmployeesChange }: Emplo
           <button
             id="btn-add-employee"
             onClick={handleOpenAddForm}
-            className="inline-flex items-center justify-center px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center justify-center flex-1 sm:flex-initial px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition shadow-sm hover:shadow-md cursor-pointer min-h-[44px]"
           >
             <UserPlus className="w-4 h-4 mr-2" />
             เพิ่มพนักงานใหม่

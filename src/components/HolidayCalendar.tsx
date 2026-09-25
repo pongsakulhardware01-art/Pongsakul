@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { toJpeg } from 'html-to-image';
 import { Employee, HolidayLeave, HolidayType } from '../types';
 import { 
@@ -12,17 +12,23 @@ import {
   ChevronRight, 
   Plus, 
   Trash2, 
+  Search,
   Filter, 
   Info, 
   Clock, 
-  AlertCircle, 
   ChevronDown,
   User,
+  Users,
   X,
-  MapPin,
   CalendarDays,
   FileText,
-  Image
+  Image,
+  ListFilter,
+  CheckCircle2,
+  Building,
+  Sparkles,
+  Eye,
+  Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateDaysBetween } from '../utils/storage';
@@ -38,27 +44,51 @@ const THAI_MONTHS = [
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
 ];
 
-const THAI_SHORT_WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+const THAI_SHORT_WEEKDAYS = [
+  { short: 'อา', full: 'อาทิตย์', isWeekend: true, color: 'text-rose-600', bg: 'bg-rose-50/30' },
+  { short: 'จ', full: 'จันทร์', isWeekend: false, color: 'text-slate-700', bg: 'bg-white' },
+  { short: 'อ', full: 'อังคาร', isWeekend: false, color: 'text-slate-700', bg: 'bg-white' },
+  { short: 'พ', full: 'พุธ', isWeekend: false, color: 'text-slate-700', bg: 'bg-white' },
+  { short: 'พฤ', full: 'พฤหัสบดี', isWeekend: false, color: 'text-slate-700', bg: 'bg-white' },
+  { short: 'ศ', full: 'ศุกร์', isWeekend: false, color: 'text-slate-700', bg: 'bg-white' },
+  { short: 'ส', full: 'เสาร์', isWeekend: true, color: 'text-sky-600', bg: 'bg-sky-50/20' }
+];
 
-const LEAVE_TYPES: { type: HolidayType; label: string; color: string; bgColor: string; borderColor: string }[] = [
-  { type: 'vacation', label: 'ลาพักร้อน', color: 'text-amber-800', bgColor: 'bg-amber-100', borderColor: 'border-amber-300' },
-  { type: 'sick', label: 'ลาป่วย', color: 'text-rose-800', bgColor: 'bg-rose-100', borderColor: 'border-rose-300' },
-  { type: 'personal', label: 'ลากิจ', color: 'text-sky-800', bgColor: 'bg-sky-100', borderColor: 'border-sky-300' },
-  { type: 'public_holiday', label: 'วันหยุดนักขัตฤกษ์', color: 'text-emerald-800', bgColor: 'bg-emerald-100', borderColor: 'border-emerald-300' },
-  { type: 'special_leave', label: 'วันลาหยุดพิเศษ', color: 'text-fuchsia-800', bgColor: 'bg-fuchsia-100', borderColor: 'border-fuchsia-300' },
-  { type: 'other', label: 'ลาประเภทอื่น', color: 'text-purple-800', bgColor: 'bg-purple-100', borderColor: 'border-purple-300' }
+const LEAVE_TYPES: { 
+  type: HolidayType; 
+  label: string; 
+  shortLabel: string;
+  emoji: string;
+  color: string; 
+  bgColor: string; 
+  borderColor: string;
+  dotColor: string;
+}[] = [
+  { type: 'vacation', label: 'ลาพักร้อน', shortLabel: 'พักร้อน', emoji: '🏖️', color: 'text-amber-800', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', dotColor: 'bg-amber-400' },
+  { type: 'sick', label: 'ลาป่วย', shortLabel: 'ลาป่วย', emoji: '🤒', color: 'text-rose-800', bgColor: 'bg-rose-50', borderColor: 'border-rose-200', dotColor: 'bg-rose-500' },
+  { type: 'personal', label: 'ลากิจ', shortLabel: 'ลากิจ', emoji: '💼', color: 'text-sky-800', bgColor: 'bg-sky-50', borderColor: 'border-sky-200', dotColor: 'bg-sky-400' },
+  { type: 'public_holiday', label: 'วันหยุดนักขัตฤกษ์/บริษัท', shortLabel: 'หยุดบริษัท', emoji: '📢', color: 'text-emerald-800', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200', dotColor: 'bg-emerald-500' },
+  { type: 'special_leave', label: 'วันลาหยุดพิเศษ', shortLabel: 'หยุดพิเศษ', emoji: '✨', color: 'text-fuchsia-800', bgColor: 'bg-fuchsia-50', borderColor: 'border-fuchsia-200', dotColor: 'bg-fuchsia-400' },
+  { type: 'other', label: 'ลาประเภทอื่น', shortLabel: 'อื่นๆ', emoji: '📌', color: 'text-purple-800', bgColor: 'bg-purple-50', borderColor: 'border-purple-200', dotColor: 'bg-purple-400' }
 ];
 
 export default function HolidayCalendar({ employees, holidays, onHolidaysChange }: HolidayCalendarProps) {
-  // Use current real local date
   const simulatedToday = new Date();
   
   const [currentYear, setCurrentYear] = useState(simulatedToday.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(simulatedToday.getMonth()); // 0-indexed
+  
+  // Views: 'grid' (ตารางปฏิทิน), 'agenda' (ไทม์ไลน์รายวัน), 'employee' (สรุปแยกตามคน)
+  const [viewMode, setViewMode] = useState<'grid' | 'agenda' | 'employee'>('grid');
+  
+  // Filter states
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState<string>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
-  
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Selected date for day inspector
   const [selectedDate, setSelectedDate] = useState<string>(simulatedToday.toISOString().split('T')[0]);
+  const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false);
   
   // State for Add Holiday modal
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -69,7 +99,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
   const [formTitle, setFormTitle] = useState<string>('');
   const [formNotes, setFormNotes] = useState<string>('');
 
-  // Info card active state (to inspect leave details)
+  // Detail inspected leave
   const [inspectedLeave, setInspectedLeave] = useState<HolidayLeave | null>(null);
 
   // Export to JPG status
@@ -80,15 +110,14 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
     if (!calendarRef.current) return;
     setIsExporting(true);
     try {
-      // Ensure element renders cleanly before snapshot is captured
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 350));
       const dataUrl = await toJpeg(calendarRef.current, {
-        quality: 1.0,
-        pixelRatio: 3, // Increases the resolution/density 3x for crystal clear printing
-        backgroundColor: '#ffffff', // Ensures white BG in case page is transparent
+        quality: 0.98,
+        pixelRatio: 2.5,
+        backgroundColor: '#ffffff',
         style: {
           transform: 'scale(1)',
-          borderRadius: '16px', // Matches 2xl border-radius visually
+          borderRadius: '16px',
         }
       });
       
@@ -106,10 +135,11 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
     }
   };
 
-  // Helper: jump to simulated today's month
   const handleJumpToToday = () => {
-    setCurrentYear(simulatedToday.getFullYear());
-    setCurrentMonth(simulatedToday.getMonth());
+    const today = new Date();
+    setCurrentYear(today.getFullYear());
+    setCurrentMonth(today.getMonth());
+    setSelectedDate(today.toISOString().split('T')[0]);
   };
 
   const handlePrevMonth = () => {
@@ -136,81 +166,167 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
   };
 
   const getFirstDayIndex = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay(); // 0 is Sunday, 1 is Monday ...
+    return new Date(year, month, 1).getDay(); // 0 is Sunday
   };
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayIndex = getFirstDayIndex(currentYear, currentMonth);
 
   // Generate date entries on calendar
-  const calendarCells: { dateString: string; dayNum: number; isCurrentMonth: boolean }[] = [];
+  const calendarCells = useMemo(() => {
+    const cells: { dateString: string; dayNum: number; isCurrentMonth: boolean; dayOfWeek: number }[] = [];
 
-  // Previous month padding cells
-  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-  const daysInPrevMonth = getDaysInMonth(prevYear, prevMonth);
-  for (let i = firstDayIndex - 1; i >= 0; i--) {
-    const dNum = daysInPrevMonth - i;
-    const mStr = String(prevMonth + 1).padStart(2, '0');
-    const dStr = String(dNum).padStart(2, '0');
-    calendarCells.push({
-      dateString: `${prevYear}-${mStr}-${dStr}`,
-      dayNum: dNum,
-      isCurrentMonth: false
-    });
-  }
+    // Previous month padding cells
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const daysInPrevMonth = getDaysInMonth(prevYear, prevMonth);
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dNum = daysInPrevMonth - i;
+      const mStr = String(prevMonth + 1).padStart(2, '0');
+      const dStr = String(dNum).padStart(2, '0');
+      const dateString = `${prevYear}-${mStr}-${dStr}`;
+      cells.push({
+        dateString,
+        dayNum: dNum,
+        isCurrentMonth: false,
+        dayOfWeek: new Date(dateString).getDay()
+      });
+    }
 
-  // Current month cells
-  for (let i = 1; i <= daysInMonth; i++) {
-    const mStr = String(currentMonth + 1).padStart(2, '0');
-    const dStr = String(i).padStart(2, '0');
-    calendarCells.push({
-      dateString: `${currentYear}-${mStr}-${dStr}`,
-      dayNum: i,
-      isCurrentMonth: true
-    });
-  }
+    // Current month cells
+    for (let i = 1; i <= daysInMonth; i++) {
+      const mStr = String(currentMonth + 1).padStart(2, '0');
+      const dStr = String(i).padStart(2, '0');
+      const dateString = `${currentYear}-${mStr}-${dStr}`;
+      cells.push({
+        dateString,
+        dayNum: i,
+        isCurrentMonth: true,
+        dayOfWeek: new Date(dateString).getDay()
+      });
+    }
 
-  // Next month padding cells
-  const cellsRemaining = 42 - calendarCells.length; // standard 6-row layout
-  const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-  const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-  for (let i = 1; i <= cellsRemaining; i++) {
-    const mStr = String(nextMonth + 1).padStart(2, '0');
-    const dStr = String(i).padStart(2, '0');
-    calendarCells.push({
-      dateString: `${nextYear}-${mStr}-${dStr}`,
-      dayNum: i,
-      isCurrentMonth: false
-    });
-  }
+    // Next month padding cells (fill up to standard 35 or 42 cells)
+    const targetLength = cells.length > 35 ? 42 : 35;
+    const cellsRemaining = targetLength - cells.length;
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    for (let i = 1; i <= cellsRemaining; i++) {
+      const mStr = String(nextMonth + 1).padStart(2, '0');
+      const dStr = String(i).padStart(2, '0');
+      const dateString = `${nextYear}-${mStr}-${dStr}`;
+      cells.push({
+        dateString,
+        dayNum: i,
+        isCurrentMonth: false,
+        dayOfWeek: new Date(dateString).getDay()
+      });
+    }
+
+    return cells;
+  }, [currentYear, currentMonth, daysInMonth, firstDayIndex]);
+
+  // Helper info for employees & leaves
+  const getEmployee = (id: string): Employee | undefined => {
+    return employees.find(e => e.id === id);
+  };
+
+  const getEmployeeName = (id: string) => {
+    if (id === 'all') return 'ทุกคนในบริษัท (วันหยุดบริษัท)';
+    const emp = getEmployee(id);
+    if (!emp) return 'ไม่พบข้อมูลพนักงาน';
+    return `${emp.firstName} ${emp.lastName} ${emp.nickname ? `(${emp.nickname})` : ''}`;
+  };
+
+  const getLeaveTypeDetails = (type: HolidayType) => {
+    return LEAVE_TYPES.find(t => t.type === type) || LEAVE_TYPES[0];
+  };
+
+  // Check if holiday matches active search and filters
+  const matchesFilter = (hol: HolidayLeave) => {
+    if (selectedEmployeeFilter !== 'all' && hol.employeeId !== 'all' && hol.employeeId !== selectedEmployeeFilter) {
+      return false;
+    }
+    if (selectedTypeFilter !== 'all' && hol.type !== selectedTypeFilter) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const emp = getEmployee(hol.employeeId);
+      const titleMatch = hol.title.toLowerCase().includes(q);
+      const noteMatch = (hol.notes || '').toLowerCase().includes(q);
+      const empNameMatch = emp ? `${emp.firstName} ${emp.lastName} ${emp.nickname || ''} ${emp.position}`.toLowerCase().includes(q) : false;
+      const isAllMatch = hol.employeeId === 'all' && ('ทุกคนในบริษัท วันหยุดบริษัท'.toLowerCase().includes(q));
+      if (!titleMatch && !noteMatch && !empNameMatch && !isAllMatch) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   // Check if holiday is active on a date
   const getHolidaysForDate = (dateStr: string) => {
     return holidays.filter(hol => {
-      // Basic overlap lookup
       const cellDate = new Date(dateStr);
       const start = new Date(hol.startDate);
       const end = new Date(hol.endDate);
       const isOverlapping = cellDate >= start && cellDate <= end;
-
       if (!isOverlapping) return false;
-
-      // Filter by Employee configuration
-      if (selectedEmployeeFilter !== 'all' && hol.employeeId !== 'all' && hol.employeeId !== selectedEmployeeFilter) {
-        return false;
-      }
-      // Filter by type
-      if (selectedTypeFilter !== 'all' && hol.type !== selectedTypeFilter) {
-        return false;
-      }
-
-      return true;
+      return matchesFilter(hol);
     });
   };
 
+  // Sorted list of leaves overlapping this current month
+  const currentMonthHolidaysList = useMemo(() => {
+    const curMonthStart = new Date(currentYear, currentMonth, 1);
+    const curMonthEnd = new Date(currentYear, currentMonth + 1, 0);
+
+    return holidays.filter(hol => {
+      const start = new Date(hol.startDate);
+      const end = new Date(hol.endDate);
+      const isOverlapCurMonth = (start <= curMonthEnd && end >= curMonthStart);
+      if (!isOverlapCurMonth) return false;
+      return matchesFilter(hol);
+    }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  }, [holidays, currentYear, currentMonth, selectedEmployeeFilter, selectedTypeFilter, searchQuery, employees]);
+
+  // Grouped by date for the Agenda / Timeline View
+  const agendaDatesList = useMemo(() => {
+    const datesMap = new Map<string, HolidayLeave[]>();
+    
+    // Scan all days of the current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const mStr = String(currentMonth + 1).padStart(2, '0');
+      const dStr = String(day).padStart(2, '0');
+      const dateString = `${currentYear}-${mStr}-${dStr}`;
+      const activeHols = getHolidaysForDate(dateString);
+      if (activeHols.length > 0) {
+        datesMap.set(dateString, activeHols);
+      }
+    }
+
+    return Array.from(datesMap.entries()).map(([dateString, leaves]) => ({
+      dateString,
+      leaves
+    }));
+  }, [daysInMonth, currentYear, currentMonth, holidays, selectedEmployeeFilter, selectedTypeFilter, searchQuery]);
+
+  // Statistics summary for current month
+  const monthStats = useMemo(() => {
+    const companyHolidaysCount = currentMonthHolidaysList.filter(h => h.employeeId === 'all').length;
+    const employeeLeaves = currentMonthHolidaysList.filter(h => h.employeeId !== 'all');
+    const totalLeaveDays = employeeLeaves.reduce((sum, h) => sum + h.durationDays, 0);
+    const uniqueEmployeesOnLeave = new Set(employeeLeaves.map(h => h.employeeId)).size;
+    return {
+      companyHolidaysCount,
+      employeeLeavesCount: employeeLeaves.length,
+      totalLeaveDays,
+      uniqueEmployeesOnLeave
+    };
+  }, [currentMonthHolidaysList]);
+
   const handleOpenAddForm = (preFilledDate?: string) => {
-    setFormEmployeeId(employees[0]?.id || '');
+    setFormEmployeeId(employees[0]?.id || 'all');
     setFormStartDate(preFilledDate || simulatedToday.toISOString().split('T')[0]);
     setFormEndDate(preFilledDate || simulatedToday.toISOString().split('T')[0]);
     setFormType('vacation');
@@ -222,7 +338,7 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
   const handleSaveHoliday = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formStartDate || !formEndDate || !formTitle) {
-      alert('กรุณารอกข้อมูลให้ครบถ้วน');
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
     if (new Date(formStartDate) > new Date(formEndDate)) {
@@ -248,824 +364,1081 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
   };
 
   const handleDeleteHoliday = (id: string) => {
-    if (confirm('คุณแน่ใจว่าต้องการลบ บันทึกวันหยุด/วันลานี้?')) {
+    if (confirm('คุณแน่ใจว่าต้องการลบบันทึกวันหยุด/วันลานี้?')) {
       onHolidaysChange(holidays.filter(h => h.id !== id));
       setInspectedLeave(null);
     }
   };
 
-  // Find info helper for leaves
-  const getEmployeeName = (id: string) => {
-    if (id === 'all') return 'ทุกคนในบริษัท (วันหยุดบริษัท)';
-    const emp = employees.find(e => e.id === id);
-    if (!emp) return 'ไม่พบข้อมูลพนักงาน';
-    return `${emp.firstName} ${emp.lastName} (${emp.nickname || emp.position})`;
-  };
-
-  const getLeaveTypeDetails = (type: HolidayType) => {
-    return LEAVE_TYPES.find(t => t.type === type) || {
-      label: 'ทั่วไป',
-      color: 'text-gray-800',
-      bgColor: 'bg-gray-100',
-      borderColor: 'border-gray-300'
-    };
-  };
-
-  // List of leaves filter
-  const currentMonthHolidaysList = holidays.filter(hol => {
-    const start = new Date(hol.startDate);
-    const end = new Date(hol.endDate);
-    
-    // Check if start/end matches current month/year or spans across
-    const curMonthStart = new Date(currentYear, currentMonth, 1);
-    const curMonthEnd = new Date(currentYear, currentMonth + 1, 0);
-
-    const isOverlapCurMonth = (start <= curMonthEnd && end >= curMonthStart);
-
-    if (!isOverlapCurMonth) return false;
-
-    if (selectedEmployeeFilter !== 'all' && hol.employeeId !== 'all' && hol.employeeId !== selectedEmployeeFilter) {
-      return false;
-    }
-    if (selectedTypeFilter !== 'all' && hol.type !== selectedTypeFilter) {
-      return false;
-    }
-
-    return true;
-  }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const selectedDateLeaves = getHolidaysForDate(selectedDate);
+  const selectedDateObj = new Date(selectedDate);
+  const todayStr = new Date().toLocaleDateString('en-CA');
 
   return (
-    <div className="space-y-6">
-      {/* Dynamic Time Panel */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-5">
+      {/* 🧭 Top Banner & Action Header */}
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-3xs border border-slate-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 id="calendar-view-header" className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-rose-600" />
-            ตารางลงวันหยุดและวันลาพนักงาน
-          </h2>
-          <p className="text-sm text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            วันที่ปัจจุบัน: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs shadow-rose-200">
+              <CalendarDays className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+                ตารางลงวันหยุดและวันลาพนักงาน
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                ตรวจสอบและวางแผนวันหยุด วันลาพักร้อน ป่วย กิจ พร้อมระบบส่งออกภาพ .jpg
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={handleJumpToToday}
+            className="px-3 py-2 border border-slate-200 text-slate-700 hover:text-rose-600 hover:border-rose-300 bg-white hover:bg-rose-50 text-xs font-bold rounded-xl transition cursor-pointer min-h-[40px] flex items-center gap-1.5"
+            title="ข้ามไปยังเดือนปัจจุบัน"
+          >
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <span>เดือนนี้</span>
+          </button>
+
           <button
             onClick={handleExportJPG}
             disabled={isExporting}
-            className="inline-flex items-center px-3.5 py-1.5 border border-amber-200 text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-xs font-bold rounded-lg transition cursor-pointer"
-            title="เซฟภาพตารางปฏิทินวันหยุดเพื่อจัดส่งไลน์/พรินต์"
+            className="inline-flex items-center justify-center px-3.5 py-2 border border-amber-300 text-amber-800 hover:bg-amber-100 bg-amber-50 disabled:opacity-50 text-xs font-bold rounded-xl transition cursor-pointer min-h-[40px] shadow-3xs"
+            title="บันทึกภาพตารางปฏิทินเพื่อส่งต่อทาง LINE หรือพิมพ์เอกสาร"
           >
             <Image className="w-4 h-4 mr-1.5 text-amber-600" />
-            {isExporting ? 'กำลังเซฟภาพ...' : 'ส่งออกเป็นภาพ (.jpg)'}
+            {isExporting ? 'กำลังบันทึกภาพ...' : 'ส่งออกเป็นภาพ (.jpg)'}
           </button>
+
           <button
-            onClick={handleJumpToToday}
-            className="px-3.5 py-1.5 border border-gray-200 text-gray-600 hover:text-rose-600 hover:border-rose-300 bg-white hover:bg-rose-50 text-xs font-bold rounded-lg transition cursor-pointer"
+            onClick={() => handleOpenAddForm(selectedDate)}
+            className="inline-flex items-center justify-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-xs hover:shadow-md cursor-pointer min-h-[40px]"
           >
-            ระบุเดือนปัจจุบัน
-          </button>
-          <button
-            onClick={() => handleOpenAddForm()}
-            className="inline-flex items-center px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            ยื่นใบลา / เพิ่มการหยุด
+            <Plus className="w-4 h-4 mr-1.5" />
+            ยื่นใบลา / บันทึกวันหยุด
           </button>
         </div>
       </div>
 
-      {/* Control Navigation & Filter Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Main Calendar View on left */}
-        <div ref={calendarRef} className="lg:col-span-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-          
-          {/* Calendar Header with Navigation / Static Banner for Export */}
-          <div className="flex justify-between items-center bg-gray-50/50 p-2.5 rounded-xl border border-gray-100">
-            <div className="flex items-center gap-1 w-full justify-between">
-              <div className="flex items-center gap-1">
-                {!isExporting && (
-                  <>
-                    <button
-                      onClick={handlePrevMonth}
-                      className="p-1.5 hover:bg-white border hover:border-gray-200 rounded-lg transition text-gray-600 hover:text-gray-950 cursor-pointer"
-                      title="เดือนก่อนหน้า"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={handleNextMonth}
-                      className="p-1.5 hover:bg-white border hover:border-gray-200 rounded-lg transition text-gray-600 hover:text-gray-950 cursor-pointer"
-                      title="เดือนถัดไป"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </>
-                )}
-                <span className="text-base font-bold text-gray-800 ml-2 flex items-center gap-1.5">
-                  <CalendarDays className="w-4 h-4 text-rose-600 shrink-0" />
-                  {THAI_MONTHS[currentMonth]} {currentYear + 543} (ค.ศ. {currentYear})
-                </span>
-              </div>
+      {/* 📊 Month Quick Statistics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-3xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Building className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 block uppercase">วันหยุดบริษัท</span>
+            <span className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+              {monthStats.companyHolidaysCount} <span className="text-xs font-medium text-slate-400">วัน</span>
+            </span>
+          </div>
+        </div>
 
-              {isExporting ? (
-                <div className="text-right">
-                  <span className="text-[11px] font-black text-rose-600 block">บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</span>
-                  <span className="text-[8.5px] text-gray-400 font-bold block">ระบบบันทึกเวลาทำงานและแผนกบุคคล</span>
-                </div>
-              ) : (
-                /* Quick dropdown filters */
-                <div className="flex gap-2.5">
-                  <div className="relative">
-                    <select
-                      value={selectedEmployeeFilter}
-                      onChange={(e) => setSelectedEmployeeFilter(e.target.value)}
-                      className="pl-2.5 pr-8 py-1.5 text-xs bg-white border border-gray-200 rounded-lg font-medium text-gray-700 outline-none appearance-none focus:ring-1 focus:ring-rose-500 cursor-pointer"
-                    >
-                      <option value="all">พนักงานทุกคน</option>
-                      {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.firstName} ({emp.nickname || emp.position.substring(0, 8)})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
+        <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-3xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+            <Users className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 block uppercase">คนลาในเดือนนี้</span>
+            <span className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+              {monthStats.uniqueEmployeesOnLeave} <span className="text-xs font-medium text-slate-400">คน</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-3xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+            <Calendar className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 block uppercase">วันลารวมทั้งหมด</span>
+            <span className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+              {monthStats.totalLeaveDays} <span className="text-xs font-medium text-slate-400">วัน</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-3xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 block uppercase">จำนวนครั้งที่ลา</span>
+            <span className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+              {monthStats.employeeLeavesCount} <span className="text-xs font-medium text-slate-400">รายการ</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 🎛️ Navigation & Filter Toolbar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-3xs space-y-3">
+        {/* Row 1: Month/Year Nav + View Switcher */}
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+          {/* Month / Year Navigator */}
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+            <button
+              onClick={handlePrevMonth}
+              className="p-2 hover:bg-slate-100 border border-slate-200 rounded-xl transition text-slate-600 hover:text-slate-950 cursor-pointer"
+              title="เดือนก่อนหน้า"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Quick Month Selector */}
+            <div className="relative">
+              <select
+                value={currentMonth}
+                onChange={(e) => setCurrentMonth(Number(e.target.value))}
+                className="pl-3 pr-7 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-xs sm:text-sm font-bold text-slate-800 outline-none appearance-none cursor-pointer focus:ring-1 focus:ring-rose-500"
+              >
+                {THAI_MONTHS.map((m, idx) => (
+                  <option key={m} value={idx}>{m}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {/* Quick Year Selector */}
+            <div className="relative">
+              <select
+                value={currentYear}
+                onChange={(e) => setCurrentYear(Number(e.target.value))}
+                className="pl-3 pr-7 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-xs sm:text-sm font-bold text-slate-800 outline-none appearance-none cursor-pointer focus:ring-1 focus:ring-rose-500"
+              >
+                {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map(y => (
+                  <option key={y} value={y}>พ.ศ. {y + 543} ({y})</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            <button
+              onClick={handleNextMonth}
+              className="p-2 hover:bg-slate-100 border border-slate-200 rounded-xl transition text-slate-600 hover:text-slate-950 cursor-pointer"
+              title="เดือนถัดไป"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* View Mode Switcher (Grid vs Agenda vs Employee) */}
+          <div className="flex bg-slate-100 p-1 rounded-xl self-start sm:self-auto w-full sm:w-auto">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white text-rose-600 shadow-3xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>ตารางปฏิทิน</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('agenda')}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'agenda'
+                  ? 'bg-white text-rose-600 shadow-3xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ListFilter className="w-3.5 h-3.5" />
+              <span>ไทม์ไลน์รายวัน ({agendaDatesList.length})</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('employee')}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'employee'
+                  ? 'bg-white text-rose-600 shadow-3xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>แยกตามคน ({employees.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Search & Quick Type Filter Pills */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อพนักงาน, ชื่อเล่น, หรือประเภทการลา..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
+            </div>
+
+            <div className="relative">
+              <select
+                value={selectedEmployeeFilter}
+                onChange={(e) => setSelectedEmployeeFilter(e.target.value)}
+                className="pl-2.5 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 outline-none appearance-none focus:ring-1 focus:ring-rose-500 cursor-pointer"
+              >
+                <option value="all">พนักงานทุกคน</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.firstName} {emp.nickname ? `(${emp.nickname})` : ''}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
-          {/* Thai Week Days Row */}
-          <div className="grid grid-cols-7 gap-1.5 text-center font-extrabold text-xs uppercase tracking-wider text-gray-500 py-2.5 border-b border-gray-100 bg-gray-50/50 rounded-t-xl">
-            {THAI_SHORT_WEEKDAYS.map((day, ix) => (
+          {/* Quick Leave Type Filter Pills */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
+            <button
+              onClick={() => setSelectedTypeFilter('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                selectedTypeFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-3xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              ทั้งหมด ({currentMonthHolidaysList.length})
+            </button>
+            {LEAVE_TYPES.map(t => {
+              const count = currentMonthHolidaysList.filter(h => h.type === t.type).length;
+              const isActive = selectedTypeFilter === t.type;
+              return (
+                <button
+                  key={t.type}
+                  onClick={() => setSelectedTypeFilter(isActive ? 'all' : t.type)}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 whitespace-nowrap cursor-pointer border ${
+                    isActive 
+                      ? `${t.bgColor} ${t.color} ${t.borderColor} ring-1 ring-offset-1 ring-slate-300 font-black` 
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{t.emoji}</span>
+                  <span>{t.shortLabel}</span>
+                  {count > 0 && (
+                    <span className="text-[10px] px-1 rounded-full bg-black/5 font-mono">{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 📅 VIEW 1: MONTH CALENDAR GRID (Full-Width, High Clarity, No Cramping) */}
+      {viewMode === 'grid' && (
+        <div ref={calendarRef} className="bg-white p-3 sm:p-6 rounded-2xl border border-slate-200/80 shadow-3xs space-y-4">
+          
+          {/* Header Banner for Export / Print */}
+          {isExporting && (
+            <div className="border-b-2 border-rose-600 pb-3 flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-black text-slate-900">บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</h3>
+                <p className="text-xs text-slate-500 font-bold">
+                  ตารางสรุปวันหยุดและวันลาพนักงาน ประจำเดือน{THAI_MONTHS[currentMonth]} {currentYear + 543}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-black text-rose-600 block">เอกสารฝ่ายบุคคล (HR)</span>
+                <span className="text-[10px] text-slate-400">ออกเมื่อ: {new Date().toLocaleDateString('th-TH')}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Thai Week Days Row (Sunday to Saturday) */}
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center">
+            {THAI_SHORT_WEEKDAYS.map((day) => (
               <div 
-                key={day} 
-                className={`py-1 ${ix === 0 ? 'text-rose-600' : 'text-gray-500'}`}
+                key={day.short} 
+                className={`py-2 px-1 rounded-xl text-xs sm:text-sm font-black border border-slate-100 ${
+                  day.isWeekend 
+                    ? day.color === 'text-rose-600' ? 'bg-rose-50/70 text-rose-600' : 'bg-sky-50/70 text-sky-600'
+                    : 'bg-slate-50 text-slate-700'
+                }`}
               >
-                {day}
+                <span className="hidden sm:inline">{day.full}</span>
+                <span className="sm:hidden">{day.short}</span>
               </div>
             ))}
           </div>
 
           {/* Calendar Grid Cells */}
-          <div id="calendar-grid-cells" className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {calendarCells.map((cell, idx) => {
               const activeHols = getHolidaysForDate(cell.dateString);
-              // Check if cell is actual today
-              const todayStr = new Date().toLocaleDateString('en-CA');
               const isToday = cell.dateString === todayStr;
               const isSelected = cell.dateString === selectedDate;
+              const isSunday = cell.dayOfWeek === 0;
+              const isSaturday = cell.dayOfWeek === 6;
 
               return (
                 <div
                   key={`${cell.dateString}-${idx}`}
-                  onClick={() => setSelectedDate(cell.dateString)}
-                  className={`min-h-[82px] sm:min-h-[135px] md:min-h-[145px] aspect-square sm:aspect-auto p-1 sm:p-2.5 bg-white border transition-all duration-200 group relative cursor-pointer ${
-                    cell.isCurrentMonth 
-                      ? 'border-slate-200 hover:border-rose-400 hover:shadow-md' 
-                      : 'border-slate-100/50 bg-slate-50/5 opacity-30'
+                  onClick={() => {
+                    setSelectedDate(cell.dateString);
+                    if (window.innerWidth < 768 || activeHols.length > 0) {
+                      setIsDayDetailModalOpen(true);
+                    }
+                  }}
+                  className={`min-h-[75px] sm:min-h-[110px] md:min-h-[125px] p-1 sm:p-2 border transition-all duration-150 relative cursor-pointer rounded-xl sm:rounded-2xl flex flex-col justify-between group ${
+                    cell.isCurrentMonth
+                      ? isSunday
+                        ? 'bg-rose-50/20 border-rose-100/70 hover:border-rose-400'
+                        : isSaturday
+                          ? 'bg-sky-50/15 border-sky-100/70 hover:border-sky-400'
+                          : 'bg-white border-slate-200/90 hover:border-rose-300 hover:shadow-xs'
+                      : 'bg-slate-50/40 border-slate-150/40 opacity-40'
                   } ${
-                    isToday 
-                      ? 'border-rose-500 bg-rose-50/15 font-semibold' 
-                      : ''
+                    isToday ? 'ring-2 ring-rose-500 bg-rose-50/30' : ''
                   } ${
-                    isSelected 
-                      ? 'border-emerald-500 bg-emerald-50/15 ring-2 ring-emerald-500/20 z-10' 
-                      : ''
-                  } rounded-xl sm:rounded-2xl flex flex-col justify-between`}
+                    isSelected ? 'ring-2 ring-emerald-500 bg-emerald-50/25 z-10' : ''
+                  }`}
                 >
-                  {/* Calendar day digit */}
-                  <div className="flex sm:justify-between items-center justify-center w-full mb-0.5 sm:mb-2">
-                    <span className={`text-[10px] sm:text-xs md:text-sm font-extrabold font-mono w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full transition-all ${
+                  {/* Top Bar: Day Number + Add Button */}
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className={`text-[11px] sm:text-xs md:text-sm font-black font-mono w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full ${
                       isToday 
-                        ? 'bg-rose-600 text-white shadow-sm shadow-rose-300 scale-105' 
-                        : cell.isCurrentMonth ? 'text-gray-800 font-bold' : 'text-gray-400'
+                        ? 'bg-rose-600 text-white shadow-xs' 
+                        : isSelected
+                          ? 'bg-emerald-600 text-white'
+                          : cell.isCurrentMonth 
+                            ? isSunday ? 'text-rose-600' : isSaturday ? 'text-sky-600' : 'text-slate-800'
+                            : 'text-slate-400'
                     }`}>
                       {cell.dayNum}
                     </span>
-                    
-                    {/* Tiny visual hover add icon */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedDate(cell.dateString);
-                        handleOpenAddForm(cell.dateString);
-                      }}
-                      className={`hidden sm:flex items-center justify-center w-6 h-6 rounded-full hover:bg-rose-50 border border-transparent hover:border-rose-100 hover:scale-110 transition duration-150 cursor-pointer ${
-                        isSelected 
-                          ? 'opacity-100 text-rose-600 bg-rose-50/80 border-rose-200' 
-                          : 'opacity-0 group-hover:opacity-100 text-rose-500'
-                      }`}
-                      title="ยื่นใบลา / เพิ่มการหยุด สำหรับวันนี้"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+
+                    {/* Quick + Button on Desktop Hover */}
+                    {!isExporting && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDate(cell.dateString);
+                          handleOpenAddForm(cell.dateString);
+                        }}
+                        className="hidden md:flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition"
+                        title="ยื่นใบลาสำหรับวันนี้"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
-                  {/* Holiday listing space - Desktop */}
-                  <div className="hidden sm:block flex-1 space-y-1.5 overflow-y-auto max-h-[92px] scrollbar-none">
-                    {activeHols.map(hol => {
+                  {/* Desktop Leaves Listing (Clean pill tags, NO break-all, readable Thai text) */}
+                  <div className="hidden sm:block flex-1 space-y-1 overflow-hidden">
+                    {activeHols.slice(0, 3).map(hol => {
                       const typeDet = getLeaveTypeDetails(hol.type);
-                      const emp = employees.find(e => e.id === hol.employeeId);
+                      const emp = getEmployee(hol.employeeId);
                       const isAll = hol.employeeId === 'all';
                       
-                      // Visual prefix indicator for easy scanning
-                      let prefix = '📌';
-                      if (hol.type === 'vacation') prefix = '🏖️';
-                      else if (hol.type === 'sick') prefix = '🤒';
-                      else if (hol.type === 'personal') prefix = '💼';
-                      else if (hol.type === 'public_holiday') prefix = '📢';
-                      else if (hol.type === 'special_leave') prefix = '✨';
-
-                      const displayName = isAll 
+                      const labelText = isAll 
                         ? hol.title 
                         : emp 
-                          ? (emp.nickname ? `${emp.firstName} (${emp.nickname})` : emp.firstName)
-                          : 'พนักงาน';
+                          ? `${emp.nickname || emp.firstName}: ${typeDet.shortLabel}`
+                          : hol.title;
 
                       return (
                         <div
                           key={hol.id}
                           onClick={(e) => {
-                            e.stopPropagation(); // prevent opening/selecting cell
+                            e.stopPropagation();
                             setInspectedLeave(hol);
                           }}
-                          className={`px-2 py-1.5 rounded-lg text-[10.5px] md:text-[11px] font-extrabold leading-tight border shadow-xs hover:shadow-xs hover:brightness-95 transition-all select-none flex items-start gap-1 ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
+                          className={`px-1.5 py-0.5 rounded-md text-[10px] md:text-[10.5px] font-bold border truncate shadow-3xs flex items-center gap-1 cursor-pointer hover:brightness-95 transition ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
                           title={`${getEmployeeName(hol.employeeId)}: ${hol.title}`}
                         >
-                          <span className="text-[11px] shrink-0 mt-0.5">{prefix}</span>
-                          <span className="whitespace-normal break-all">{displayName}</span>
+                          <span className="text-[10px] shrink-0">{typeDet.emoji}</span>
+                          <span className="truncate">{labelText}</span>
                         </div>
                       );
                     })}
-                  </div>
 
-                  {/* Holiday listing space - Mobile (Mini indicator name badges) */}
-                  <div className="flex sm:hidden flex-col gap-0.5 mt-auto w-full items-center overflow-hidden">
-                    {activeHols.slice(0, 2).map(hol => {
-                      const typeDet = getLeaveTypeDetails(hol.type);
-                      const emp = employees.find(e => e.id === hol.employeeId);
-                      const isAll = hol.employeeId === 'all';
-                      
-                      const shortName = isAll 
-                        ? 'หยุดบริษัท' 
-                        : emp 
-                          ? (emp.nickname || emp.firstName.substring(0, 3))
-                          : 'พนักงาน';
-                          
-                      return (
-                        <div
-                          key={hol.id}
-                          className={`w-full text-[8px] font-black py-0.5 px-0.5 rounded-sm text-center truncate leading-none border shadow-3xs ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
-                          title={`${getEmployeeName(hol.employeeId)}: ${hol.title}`}
-                        >
-                          {shortName}
-                        </div>
-                      );
-                    })}
-                    {activeHols.length > 2 && (
-                      <span className="text-[7.5px] font-black text-rose-600 leading-none mt-0.5">
-                        +{activeHols.length - 2} คน
-                      </span>
+                    {activeHols.length > 3 && (
+                      <div className="text-[9.5px] font-bold text-rose-600 text-center py-0.5 bg-rose-50/80 rounded-md border border-rose-100">
+                        +{activeHols.length - 3} รายการเพิ่มเติม
+                      </div>
                     )}
                   </div>
 
+                  {/* Mobile Leaves Indicator: Colored dots + count (Tapping opens instant Day Inspector) */}
+                  <div className="sm:hidden flex flex-col gap-0.5 mt-auto w-full items-center">
+                    {activeHols.length > 0 && (
+                      <div className="flex items-center justify-center gap-1 flex-wrap max-w-full">
+                        {activeHols.slice(0, 3).map(hol => {
+                          const typeDet = getLeaveTypeDetails(hol.type);
+                          return (
+                            <span
+                              key={hol.id}
+                              className={`w-2 h-2 rounded-full ${typeDet.dotColor} ring-1 ring-white shrink-0`}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {activeHols.length > 0 && (
+                      <span className="text-[8.5px] font-black text-slate-700 bg-slate-100 px-1 rounded-sm mt-0.5">
+                        {activeHols.length} รายการ
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
 
           {/* Color Indicators Legend */}
-          <div className="flex flex-wrap gap-x-4 gap-y-2 pt-4 border-t border-gray-100 text-[11px] font-semibold text-gray-500">
-            <span className="flex items-center gap-1.5 mr-2 text-gray-400">สัญลักษณ์สี:</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-600">
+            <span className="text-slate-400 font-bold">สัญลักษณ์:</span>
             {LEAVE_TYPES.map(t => (
               <span key={t.type} className="flex items-center gap-1.5">
-                <span className={`w-3.5 h-3.5 rounded-md border ${t.bgColor} ${t.borderColor}`} />
-                {t.label}
+                <span className={`w-3 h-3 rounded-md border ${t.bgColor} ${t.borderColor}`} />
+                <span className="text-xs">{t.emoji} {t.label}</span>
               </span>
             ))}
           </div>
 
-          {/* Selected Date Detail Section (Interactive & Highly polished, extremely useful on mobile) */}
-          {isExporting ? (
-            /* Consolidated Report Summary Block for exported JPG */
-            <div className="mt-5 border-t border-gray-150 pt-5 space-y-4">
-              <div className="bg-slate-50/80 border border-gray-200/60 rounded-2xl p-4 space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-200/80 pb-2.5">
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-black text-gray-900 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                      รายงานสรุปวันหยุดและการลาประจำเดือน
-                    </h3>
-                    <p className="text-[10px] text-gray-500 font-bold mt-0.5">
-                      สรุปแผนงาน วันลา และวันหยุดพนักงานประจำเดือน{THAI_MONTHS[currentMonth]} {currentYear + 543}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[8.5px] text-gray-400 font-bold block">
-                      พิมพ์วันที่: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
+          {/* Bottom Selected Date Banner for Desktop */}
+          <div className="hidden md:flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-rose-600" />
+              <span className="text-xs font-bold text-slate-700">วันที่เลือก:</span>
+              <span className="text-xs font-black text-slate-900 font-sans">
+                {selectedDateObj.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+              <span className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md ml-2">
+                {selectedDateLeaves.length} รายการ
+              </span>
+            </div>
 
-                {/* Summary statistics grid */}
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="bg-white p-2 rounded-xl border border-gray-200/40 shadow-3xs text-center">
-                    <span className="text-[9px] font-black text-gray-400 block uppercase">วันหยุดบริษัท</span>
-                    <span className="text-sm font-extrabold text-emerald-600 block mt-0.5">
-                      {currentMonthHolidaysList.filter(h => h.employeeId === 'all').length} วัน
-                    </span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-gray-200/40 shadow-3xs text-center">
-                    <span className="text-[9px] font-black text-gray-400 block uppercase">วันลาพนักงาน</span>
-                    <span className="text-sm font-extrabold text-rose-600 block mt-0.5">
-                      {currentMonthHolidaysList.filter(h => h.employeeId !== 'all').length} ครั้ง
-                    </span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-gray-200/40 shadow-3xs text-center">
-                    <span className="text-[9px] font-black text-gray-400 block uppercase">วันลาสะสมรวม</span>
-                    <span className="text-sm font-extrabold text-amber-600 block mt-0.5">
-                      {currentMonthHolidaysList.filter(h => h.employeeId !== 'all').reduce((sum, h) => sum + h.durationDays, 0)} วัน
-                    </span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-gray-200/40 shadow-3xs text-center">
-                    <span className="text-[9px] font-black text-gray-400 block uppercase">คนลาทั้งหมด</span>
-                    <span className="text-sm font-extrabold text-purple-600 block mt-0.5">
-                      {new Set(currentMonthHolidaysList.filter(h => h.employeeId !== 'all').map(h => h.employeeId)).size} คน
-                    </span>
-                  </div>
-                </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDayDetailModalOpen(true)}
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5 text-slate-500" />
+                <span>เปิดดูรายละเอียดของวันนี้</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenAddForm(selectedDate)}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>บันทึกวันหยุดวันนี้</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                {/* Leave statistics by type */}
-                <div className="bg-white p-3 rounded-xl border border-gray-100/80 space-y-1.5">
-                  <h4 className="text-[10px] font-black text-slate-700 border-b border-slate-50 pb-1 flex items-center gap-1">
-                    <span className="w-1 h-2 bg-rose-600 rounded-2xs inline-block" />
-                    สถิติวันหยุด/วันลาแยกตามประเภท
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {LEAVE_TYPES.map(t => {
-                      const listForType = currentMonthHolidaysList.filter(h => h.type === t.type);
-                      const totalDays = listForType.reduce((sum, h) => sum + h.durationDays, 0);
-                      if (listForType.length === 0) return null;
-                      return (
-                        <div key={t.type} className={`px-2 py-1 border rounded-lg text-[9px] font-black flex items-center gap-1 ${t.bgColor} ${t.color} ${t.borderColor}`}>
-                          <span>{t.label}: {listForType.length} รายการ ({totalDays} วัน)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+      {/* 📋 VIEW 2: AGENDA TIMELINE (Grouped by Date in Chronological Order) */}
+      {viewMode === 'agenda' && (
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-3xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+                <ListFilter className="w-4 h-4 text-rose-600" />
+                กำหนดการวันหยุดและวันลาประจำเดือน{THAI_MONTHS[currentMonth]} {currentYear + 543}
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                เรียงลำดับตามวันที่ เพื่อให้ตรวจสอบผู้อยู่ปฏิบัติงานได้สะดวกที่สุด
+              </p>
+            </div>
+            <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+              พบ {agendaDatesList.length} วันที่มีการลา
+            </span>
+          </div>
 
-                {/* Lists Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
-                  {/* Company Holidays */}
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-800 flex items-center gap-1 pb-1 border-b border-gray-200">
-                      📢 วันหยุดบริษัท / นักขัตฤกษ์
-                    </h4>
-                    <div className="space-y-1.5">
-                      {currentMonthHolidaysList.filter(h => h.employeeId === 'all').map(hol => {
-                        return (
-                          <div key={hol.id} className="p-2 bg-white border border-gray-150/60 rounded-xl flex justify-between items-center gap-2">
-                            <div className="min-w-0">
-                              <p className="text-[10.5px] font-extrabold text-slate-800 truncate">{hol.title}</p>
-                              <p className="text-[8.5px] text-gray-400 font-bold font-mono mt-0.5">
-                                {new Date(hol.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                {hol.startDate !== hol.endDate ? ` - ${new Date(hol.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''}
-                              </p>
-                            </div>
-                            <span className="text-[9.5px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md shrink-0">
-                              {hol.durationDays} วัน
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {currentMonthHolidaysList.filter(h => h.employeeId === 'all').length === 0 && (
-                        <p className="text-[9.5px] text-gray-400 font-bold italic text-center py-2 bg-white/40 rounded-xl border border-dashed border-gray-150/60">
-                          ไม่มีวันหยุดบริษัทในเดือนนี้
-                        </p>
-                      )}
+          {agendaDatesList.length === 0 ? (
+            <div className="text-center py-12 px-4 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-bold text-slate-700">ไม่มีข้อมูลวันหยุดหรือการลาตามเงื่อนไขที่เลือก</p>
+              <p className="text-xs text-slate-400">พนักงานทุกคนปฏิบัติงานตามปกติในเดือนนี้</p>
+              <button
+                type="button"
+                onClick={() => handleOpenAddForm()}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 px-4 py-2 rounded-xl shadow-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                ยื่นใบลา / บันทึกวันหยุด
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {agendaDatesList.map(({ dateString, leaves }) => {
+                const dateObj = new Date(dateString);
+                const isSun = dateObj.getDay() === 0;
+                const isSat = dateObj.getDay() === 6;
+                const isTodayDate = dateString === todayStr;
+
+                return (
+                  <div key={dateString} className="border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 bg-white shadow-3xs space-y-3">
+                    {/* Date Header Pill */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-xl text-xs font-black font-mono ${
+                          isTodayDate 
+                            ? 'bg-rose-600 text-white shadow-xs' 
+                            : isSun 
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                              : isSat 
+                                ? 'bg-sky-50 text-sky-700 border border-sky-200' 
+                                : 'bg-slate-100 text-slate-800'
+                        }`}>
+                          {dateObj.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'short' })}
+                        </span>
+                        {isTodayDate && (
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                            วันนี้
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="text-xs font-bold text-slate-500">
+                        {leaves.length} คน/รายการ
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Employee Leaves */}
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-800 flex items-center gap-1 pb-1 border-b border-gray-200">
-                      📋 รายการลางานของพนักงาน
-                    </h4>
-                    <div className="space-y-1.5">
-                      {currentMonthHolidaysList.filter(h => h.employeeId !== 'all').map(hol => {
+                    {/* Leaves cards under this date */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {leaves.map(hol => {
                         const typeDet = getLeaveTypeDetails(hol.type);
-                        const emp = employees.find(e => e.id === hol.employeeId);
+                        const emp = getEmployee(hol.employeeId);
+                        const isAll = hol.employeeId === 'all';
+
                         return (
-                          <div key={hol.id} className="p-2 bg-white border border-gray-150/60 rounded-xl flex justify-between items-center gap-2">
-                            <div className="min-w-0">
-                              <p className="text-[10.5px] font-black text-slate-800 truncate flex items-center gap-1 flex-wrap">
-                                <span>{emp ? `${emp.firstName}` : 'พนักงาน'}</span>
-                                {emp?.nickname && <span className="text-[9px] bg-rose-50 text-rose-700 font-black px-1 py-0.5 rounded">({emp.nickname})</span>}
-                              </p>
-                              <p className="text-[9.5px] text-gray-500 font-medium truncate mt-0.5">{hol.title}</p>
-                              <p className="text-[8.5px] text-gray-400 font-semibold font-mono mt-0.5">
-                                {new Date(hol.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                {hol.startDate !== hol.endDate ? ` - ${new Date(hol.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-[10px] font-black text-slate-800 block">{hol.durationDays} วัน</span>
-                              <span className={`text-[8px] font-black px-1.5 py-0.2 rounded border mt-0.5 inline-block ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}>
+                          <div
+                            key={hol.id}
+                            onClick={() => setInspectedLeave(hol)}
+                            className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/40 hover:bg-white hover:border-rose-300 hover:shadow-xs transition cursor-pointer flex flex-col justify-between gap-2"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center text-sm font-bold shrink-0 shadow-3xs">
+                                  {typeDet.emoji}
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-xs font-bold text-slate-900 block truncate">
+                                    {isAll ? '📢 ทุกคนในบริษัท (วันหยุดบริษัท)' : emp ? `${emp.firstName} ${emp.lastName} ${emp.nickname ? `(${emp.nickname})` : ''}` : 'พนักงาน'}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500 font-medium block truncate">
+                                    {hol.title} {emp?.department ? `• แผนก ${emp.department}` : ''}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}>
                                 {typeDet.label}
                               </span>
                             </div>
+
+                            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-150/60 font-sans">
+                              <span>
+                                รวม {hol.durationDays} วัน ({new Date(hol.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                {hol.startDate !== hol.endDate ? ` - ${new Date(hol.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''})
+                              </span>
+                              {hol.notes && (
+                                <span className="text-slate-400 truncate max-w-[140px]" title={hol.notes}>
+                                  หมายเหตุ: {hol.notes}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
-                      {currentMonthHolidaysList.filter(h => h.employeeId !== 'all').length === 0 && (
-                        <p className="text-[9.5px] text-gray-400 font-bold italic text-center py-2 bg-white/40 rounded-xl border border-dashed border-gray-150/60">
-                          ไม่มีพนักงานลางานในเดือนนี้
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 👥 VIEW 3: BY EMPLOYEE MATRIX / SUMMARY */}
+      {viewMode === 'employee' && (
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-3xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+                <Users className="w-4 h-4 text-rose-600" />
+                สรุปประวัติวันลาแยกตามรายชื่อพนักงาน
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                ตรวจสอบการลาของพนักงานแต่ละคนในเดือน{THAI_MONTHS[currentMonth]} {currentYear + 543}
+              </p>
+            </div>
+            <span className="text-xs font-bold text-slate-600">
+              พนักงานทั้งหมด {employees.length} คน
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {employees.map(emp => {
+              const empLeaves = currentMonthHolidaysList.filter(h => h.employeeId === emp.id);
+              const totalDays = empLeaves.reduce((sum, h) => sum + h.durationDays, 0);
+
+              return (
+                <div key={emp.id} className="p-4 bg-slate-50/60 border border-slate-200/90 rounded-2xl space-y-3 shadow-3xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-800 font-black text-sm flex items-center justify-center shrink-0 shadow-3xs">
+                          {emp.firstName.slice(0, 1)}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 block truncate">
+                            {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''}
+                          </span>
+                          <span className="text-[10.5px] text-slate-400 block truncate">
+                            {emp.employeeCode} • {emp.position}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${
+                        totalDays > 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        {totalDays > 0 ? `ลา ${totalDays} วัน` : 'ไม่ลา'}
+                      </span>
+                    </div>
+
+                    {/* Leaves list for this employee */}
+                    <div className="mt-3 space-y-1.5">
+                      {empLeaves.length === 0 ? (
+                        <p className="text-[11px] text-slate-400 italic bg-white p-2 rounded-xl border border-slate-150 text-center">
+                          ไม่มีการลาในเดือนนี้
                         </p>
+                      ) : (
+                        empLeaves.map(hol => {
+                          const typeDet = getLeaveTypeDetails(hol.type);
+                          return (
+                            <div
+                              key={hol.id}
+                              onClick={() => setInspectedLeave(hol)}
+                              className="p-2 bg-white rounded-xl border border-slate-200 text-xs flex justify-between items-center gap-2 cursor-pointer hover:border-rose-300 transition"
+                            >
+                              <div className="min-w-0">
+                                <span className="font-bold text-slate-800 block truncate text-[11px]">
+                                  {typeDet.emoji} {hol.title}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono block">
+                                  {new Date(hol.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                  {hol.startDate !== hol.endDate ? ` - ${new Date(hol.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-bold text-rose-600 shrink-0">
+                                {hol.durationDays} วัน
+                              </span>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormEmployeeId(emp.id);
+                      setFormStartDate(selectedDate);
+                      setFormEndDate(selectedDate);
+                      setFormType('vacation');
+                      setFormTitle('');
+                      setFormNotes('');
+                      setIsFormOpen(true);
+                    }}
+                    className="w-full py-1.5 px-2 bg-white hover:bg-rose-50 border border-slate-200 text-slate-700 hover:text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-rose-600" />
+                    <span>ยื่นใบลาให้ {emp.nickname || emp.firstName}</span>
+                  </button>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 bg-gray-50/60 border border-gray-100 rounded-2xl p-4 sm:p-5">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-3 mb-3">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-black text-gray-900 flex items-center gap-1.5 uppercase tracking-wide">
-                    <Clock className="w-4 h-4 text-rose-600" />
-                    รายการวันหยุด/วันลาของวันที่เลือก
-                  </h3>
-                  <p className="text-xs text-rose-600 font-bold mt-1 font-sans">
-                    {new Date(selectedDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 🔍 MODAL 1: DAY DETAILS INSPECTOR (Instant popover for any clicked day) */}
+      <AnimatePresence>
+        {isDayDetailModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center font-black">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900">
+                      {selectedDateObj.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      รายการผู้ที่ลาและวันหยุดในวันนี้ ({selectedDateLeaves.length} รายการ)
+                    </p>
+                  </div>
                 </div>
+
                 <button
-                  onClick={() => handleOpenAddForm(selectedDate)}
-                  className="flex items-center gap-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 px-3.5 py-1.5 rounded-xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer w-full sm:w-auto justify-center"
+                  type="button"
+                  onClick={() => setIsDayDetailModalOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  ลงวันหยุด/ลาของวันนี้
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Active Holidays on this selected date */}
-              {getHolidaysForDate(selectedDate).length === 0 ? (
-                <div className="text-center py-5 text-xs text-gray-400 font-semibold bg-white border border-dashed border-gray-100 rounded-xl">
-                  ไม่มีประวัติวันหยุดหรือการลาในวันนี้
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {getHolidaysForDate(selectedDate).map(hol => {
+              {/* Modal Body */}
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1">
+                {selectedDateLeaves.length === 0 ? (
+                  <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700">ไม่มีการลาหรือวันหยุดในวันนี้</p>
+                    <p className="text-[11px] text-slate-400">พนักงานทุกคนปฏิบัติงานตามตารางปกติ</p>
+                  </div>
+                ) : (
+                  selectedDateLeaves.map(hol => {
                     const typeDet = getLeaveTypeDetails(hol.type);
-                    const emp = employees.find(e => e.id === hol.employeeId);
+                    const emp = getEmployee(hol.employeeId);
                     const isAll = hol.employeeId === 'all';
-                    
-                    let prefix = '📌';
-                    if (hol.type === 'vacation') prefix = '🏖️';
-                    else if (hol.type === 'sick') prefix = '🤒';
-                    else if (hol.type === 'personal') prefix = '💼';
-                    else if (hol.type === 'public_holiday') prefix = '📢';
-                    else if (hol.type === 'special_leave') prefix = '✨';
 
                     return (
                       <div
                         key={hol.id}
-                        onClick={() => setInspectedLeave(hol)}
-                        className="p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white hover:border-rose-100 hover:shadow-xs transition-all cursor-pointer"
+                        className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-2 shadow-3xs"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <span className="text-base sm:text-lg shrink-0">{prefix}</span>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-black text-slate-900 flex flex-wrap items-center gap-1.5">
-                              <span className="text-sm font-bold text-slate-800">{isAll ? 'ทุกคนในบริษัท' : emp ? `${emp.firstName} ${emp.lastName}` : 'พนักงาน'}</span>
-                              {emp?.nickname && <span className="text-[10.5px] bg-rose-50 text-rose-700 border border-rose-100 px-1.5 py-0.5 rounded-md font-extrabold">({emp.nickname})</span>}
-                              {emp?.department && <span className="text-[9.5px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">{emp.department} • {emp.position}</span>}
-                            </div>
-                            <div className="text-[11px] font-medium text-slate-500 mt-1 whitespace-normal break-words">
-                              {hol.title} {hol.notes ? `— ${hol.notes}` : ''}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base">{typeDet.emoji}</span>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-slate-900 block truncate">
+                                {isAll ? '📢 ทุกคนในบริษัท (วันหยุดบริษัท)' : emp ? `${emp.firstName} ${emp.lastName} ${emp.nickname ? `(${emp.nickname})` : ''}` : 'พนักงาน'}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-medium block truncate">
+                                {hol.title} {emp?.department ? `• ${emp.department}` : ''}
+                              </span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right shrink-0 self-end sm:self-auto">
-                          <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}>
+
+                          <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}>
                             {typeDet.label}
                           </span>
                         </div>
+
+                        <div className="flex items-center justify-between text-xs text-slate-500 pt-1.5 border-t border-slate-200/60">
+                          <span>ระยะเวลา: <strong className="text-rose-600">{hol.durationDays} วัน</strong></span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsDayDetailModalOpen(false);
+                              handleDeleteHoliday(hol.id);
+                            }}
+                            className="text-red-500 hover:text-red-700 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>ลบรายการ</span>
+                          </button>
+                        </div>
+
+                        {hol.notes && (
+                          <p className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 font-sans">
+                            {hol.notes}
+                          </p>
+                        )}
                       </div>
                     );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                  })
+                )}
+              </div>
 
-        </div>
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-100 flex items-center justify-between gap-2 bg-slate-50/70">
+                <button
+                  type="button"
+                  onClick={() => setIsDayDetailModalOpen(false)}
+                  className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  ปิดหน้าต่าง
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDayDetailModalOpen(false);
+                    handleOpenAddForm(selectedDate);
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>บันทึกวันหยุด/ลาของวันนี้</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-        {/* Dynamic Detail List Panel on right */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Inspected Leave Details Card */}
-          <AnimatePresence mode="wait">
-            {inspectedLeave ? (
-              <motion.div
-                key="inspected-card"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-white border border-rose-200 shadow-md rounded-2xl p-5 relative overflow-hidden"
-              >
-                {/* Visual badge highlight */}
-                <div className={`absolute top-0 left-0 right-0 h-1.5 ${getLeaveTypeDetails(inspectedLeave.type).bgColor}`} />
+      {/* 🔍 MODAL 2: INSPECTED LEAVE DETAIL CARD */}
+      <AnimatePresence>
+        {inspectedLeave && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden relative"
+            >
+              <div className={`h-2 ${getLeaveTypeDetails(inspectedLeave.type).bgColor}`} />
 
-                <div className="flex justify-between items-start mb-3.5">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${getLeaveTypeDetails(inspectedLeave.type).bgColor} ${getLeaveTypeDetails(inspectedLeave.type).color}`}>
-                    {getLeaveTypeDetails(inspectedLeave.type).label}
+              <div className="p-5 space-y-4">
+                <div className="flex justify-between items-start">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${getLeaveTypeDetails(inspectedLeave.type).bgColor} ${getLeaveTypeDetails(inspectedLeave.type).color} ${getLeaveTypeDetails(inspectedLeave.type).borderColor}`}>
+                    {getLeaveTypeDetails(inspectedLeave.type).emoji} {getLeaveTypeDetails(inspectedLeave.type).label}
                   </span>
                   <button 
                     onClick={() => setInspectedLeave(null)}
-                    className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition"
+                    className="p-1 rounded-full text-slate-400 hover:bg-slate-100 transition cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <h3 className="font-bold text-gray-950 text-base leading-snug mb-3">
-                  {inspectedLeave.title}
-                </h3>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base leading-snug">
+                    {inspectedLeave.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {getEmployeeName(inspectedLeave.employeeId)}
+                  </p>
+                </div>
 
-                <div className="space-y-2.5 text-sm text-gray-600 mb-4 border-t border-gray-50 pt-3">
-                  <div className="flex items-start gap-2">
-                    <User className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-400 font-medium">ชื่อผู้ลาพัก</p>
-                      <p className="font-bold text-gray-900">{getEmployeeName(inspectedLeave.employeeId)}</p>
-                    </div>
+                <div className="space-y-2.5 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">ช่วงวันที่:</span>
+                    <span className="font-bold text-slate-900">
+                      {new Date(inspectedLeave.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                      {' - '}
+                      {new Date(inspectedLeave.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
                   </div>
 
-                  <div className="flex items-start gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-400 font-medium">ช่วงเวลา</p>
-                      <p className="font-semibold text-gray-900">
-                        {new Date(inspectedLeave.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                        {' - '}
-                        {new Date(inspectedLeave.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2">
-                    <Clock className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-400 font-medium">จำนวนวันหยุด</p>
-                      <p className="font-bold text-rose-600">{inspectedLeave.durationDays} วัน</p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">จำนวนวันหยุด:</span>
+                    <span className="font-black text-rose-600 text-sm">
+                      {inspectedLeave.durationDays} วัน
+                    </span>
                   </div>
 
                   {inspectedLeave.notes && (
-                    <div className="flex items-start gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                      <FileText className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-[10px] text-gray-400 font-medium">รายละเอียด/เหตุผล</p>
-                        <p className="text-xs text-gray-700 font-medium whitespace-pre-wrap">{inspectedLeave.notes}</p>
-                      </div>
+                    <div className="pt-2 border-t border-slate-200/60">
+                      <span className="text-slate-400 block mb-1">เหตุผล/หมายเหตุ:</span>
+                      <p className="text-slate-700 bg-white p-2 rounded-lg border border-slate-150">
+                        {inspectedLeave.notes}
+                      </p>
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                  <span className="text-[10.5px] text-gray-400 font-medium">รหัสรายการ: {inspectedLeave.id}</span>
+                <div className="flex justify-between items-center pt-2">
                   <button
                     onClick={() => handleDeleteHoliday(inspectedLeave.id)}
-                    className="inline-flex items-center text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 font-bold px-3 py-1.5 rounded-lg transition"
+                    className="inline-flex items-center text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 font-bold px-3 py-2 rounded-xl transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-1" />
                     ลบวันลา/วันหยุด
                   </button>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-4.5 text-center text-gray-500">
-                <Info className="w-7 h-7 text-gray-300 mx-auto mb-2" />
-                <p className="text-xs font-semibold">คลิกเลือกแถบวันลาบนปฏิทิน</p>
-                <p className="text-[10px] text-gray-400 mt-1">เพื่อเปิดดูรายละเอียดและลบใบลาการทำงานของพนักงาน</p>
-              </div>
-            )}
-          </AnimatePresence>
-
-          {/* Month Summary Leave List */}
-          <div className="bg-white p-5 border border-gray-100 shadow-sm rounded-2xl space-y-3.5">
-            <div>
-              <h3 className="font-bold text-gray-900 text-sm">รายการหยุดงานในเดือนนี้</h3>
-              <p className="text-[10.5px] text-gray-400 mt-0.5">รวมทั้งหมด {currentMonthHolidaysList.length} วันหยุด / แผนงาน</p>
-            </div>
-
-            <div className="space-y-2.5 max-h-[310px] overflow-y-auto pr-1">
-              {currentMonthHolidaysList.map(hol => {
-                const typeDet = getLeaveTypeDetails(hol.type);
-                const employeeInfo = employees.find(e => e.id === hol.employeeId);
-                return (
-                  <div
-                    key={hol.id}
-                    onClick={() => setInspectedLeave(hol)}
-                    className="p-3 border border-gray-100 hover:border-rose-100 bg-white hover:bg-rose-50/10 rounded-xl cursor-pointer transition flex justify-between items-center gap-3"
+                  <button
+                    onClick={() => setInspectedLeave(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
                   >
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${typeDet.bgColor} ${typeDet.color} ring-1 ring-offset-1 ring-gray-100 shrink-0`} />
-                        <h4 className="font-bold text-xs text-slate-900 whitespace-normal break-words">{hol.title}</h4>
-                      </div>
-                      
-                      <div className="text-[11px] text-slate-700 font-black flex flex-wrap items-center gap-1">
-                        <span>{hol.employeeId === 'all' ? '📢 ทุกคนในบริษัท' : `${employeeInfo?.firstName || 'พนักงาน'} ${employeeInfo?.lastName || ''}`}</span>
-                        {employeeInfo?.nickname && <span className="text-[9.5px] bg-rose-50 text-rose-700 border border-rose-100/60 px-1.5 py-0.5 rounded font-extrabold">({employeeInfo.nickname})</span>}
-                      </div>
-
-                      {employeeInfo?.department && (
-                        <div className="text-[9.5px] text-slate-500 font-medium">
-                          {employeeInfo.department} • {employeeInfo.position}
-                        </div>
-                      )}
-                      
-                      <p className="text-[10px] text-gray-400 font-semibold font-mono">
-                        {new Date(hol.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                        {hol.startDate !== hol.endDate ? ` - ${new Date(hol.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <span className="text-xs font-bold text-rose-600 block">{hol.durationDays} วัน</span>
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">{typeDet.label}</span>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {currentMonthHolidaysList.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-xs text-gray-400">ไม่มีประวัติวันลาพักในระบบสำหรับเดือนนี้</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Model Overlay for ADD LEAVE form */}
-      <AnimatePresence>
-        {isFormOpen && (
-          <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-              
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsFormOpen(false)}
-                className="fixed inset-0 transition-opacity bg-black/40 backdrop-blur-xs"
-              />
-
-              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="relative z-10 inline-block overflow-hidden text-left align-bottom bg-white rounded-2xl shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-gray-100"
-              >
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                  <h3 className="text-base font-bold text-gray-900">
-                    ลงทะเบียนวันลาหยุดงานพนักงาน
-                  </h3>
-                  <button 
-                    onClick={() => setIsFormOpen(false)}
-                    className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition"
-                  >
-                    <X className="w-5 h-5" />
+                    ปิด
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-                <form onSubmit={handleSaveHoliday} className="p-6 space-y-4">
-                  
-                  {/* Select Employee */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="form-leave-emp" className="text-xs font-semibold text-gray-500 uppercase block">เลือกพนักงาน <span className="text-red-500">*</span></label>
-                    <select
-                      id="form-leave-emp"
-                      value={formEmployeeId}
-                      onChange={(e) => setFormEmployeeId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm bg-white"
-                      required
-                    >
-                      <option value="all">📢 วันหยุดบริษัทพิเศษ (วันหยุดบริษัททุกคน)</option>
-                      {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.employeeCode} - {emp.firstName} {emp.lastName} [{emp.position}]
-                        </option>
-                      ))}
-                    </select>
+      {/* 📝 MODAL 3: ADD LEAVE / RECORD HOLIDAY FORM */}
+      <AnimatePresence>
+        {isFormOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden"
+            >
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center">
+                    <Plus className="w-4 h-4" />
                   </div>
+                  <h3 className="font-black text-slate-900 text-base">
+                    บันทึกการลา / เพิ่มวันหยุด
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsFormOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-                  {/* Date fields */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label htmlFor="form-leave-start" className="text-xs font-semibold text-gray-500 uppercase block">วันเริ่มต้นหยุด <span className="text-red-500">*</span></label>
-                      <input
-                        id="form-leave-start"
-                        type="date"
-                        value={formStartDate}
-                        onChange={(e) => setFormStartDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="form-leave-end" className="text-xs font-semibold text-gray-500 uppercase block">วันสุดท้ายสิ้นสุด <span className="text-red-500">*</span></label>
-                      <input
-                        id="form-leave-end"
-                        type="date"
-                        value={formEndDate}
-                        onChange={(e) => setFormEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm"
-                        required
-                      />
-                    </div>
+              <form onSubmit={handleSaveHoliday} className="p-5 space-y-4 text-xs font-sans">
+                {/* Employee Selector */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    ผู้ลาพัก / บุคลากร <span className="text-rose-600">*</span>
+                  </label>
+                  <select
+                    value={formEmployeeId}
+                    onChange={(e) => setFormEmployeeId(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                    required
+                  >
+                    <option value="all">📢 ทุกคนในบริษัท (วันหยุดนักขัตฤกษ์ / วันหยุดบริษัท)</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''} - {emp.position}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Leave Type */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    ประเภทการหยุด <span className="text-rose-600">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {LEAVE_TYPES.map(t => (
+                      <label
+                        key={t.type}
+                        className={`p-2 rounded-xl border flex items-center gap-1.5 cursor-pointer transition ${
+                          formType === t.type 
+                            ? `${t.bgColor} ${t.color} ${t.borderColor} ring-1 ring-offset-1 ring-slate-300 font-black` 
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="leaveType"
+                          value={t.type}
+                          checked={formType === t.type}
+                          onChange={() => setFormType(t.type)}
+                          className="sr-only"
+                        />
+                        <span>{t.emoji}</span>
+                        <span className="truncate">{t.shortLabel}</span>
+                      </label>
+                    ))}
                   </div>
+                </div>
 
-                  {/* Holiday Type & duration preview */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="form-leave-type" className="text-xs font-semibold text-gray-500 uppercase block">ประเภทการลา / วันหยุด <span className="text-red-500">*</span></label>
-                    <select
-                      id="form-leave-type"
-                      value={formType}
-                      onChange={(e) => setFormType(e.target.value as HolidayType)}
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm bg-white"
-                    >
-                      {LEAVE_TYPES.map(t => (
-                        <option key={t.type} value={t.type}>{t.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Short Title */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="form-leave-title" className="text-xs font-semibold text-gray-500 uppercase block">ระบุหัวข้อ / เหตุผลหลัก <span className="text-red-500">*</span></label>
+                {/* Dates Range */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      วันที่เริ่มต้น <span className="text-rose-600">*</span>
+                    </label>
                     <input
-                      id="form-leave-title"
-                      type="text"
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      placeholder="เช่น ขอลากลับบ้านต่างจังหวัด, มีอาการไข้หวัด"
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm"
+                      type="date"
+                      value={formStartDate}
+                      onChange={(e) => setFormStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"
                       required
                     />
                   </div>
-
-                  {/* Notes Area */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="form-leave-notes" className="text-xs font-semibold text-gray-500 uppercase block">รายละเอียดเพิ่มเติม</label>
-                    <textarea
-                      id="form-leave-notes"
-                      value={formNotes}
-                      onChange={(e) => setFormNotes(e.target.value)}
-                      placeholder="ข้อมูลบันทึกเพิ่มเติมประกอบการอนุมัติ..."
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-1 focus:ring-rose-500 rounded-lg text-sm resize-none"
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      วันที่สิ้นสุด <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={formEndDate}
+                      onChange={(e) => setFormEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                      required
                     />
                   </div>
+                </div>
 
-                  {/* Total duration preview box */}
-                  {formStartDate && formEndDate && (
-                    <div className="bg-rose-50/50 border border-rose-100 p-3 rounded-lg text-center text-xs text-rose-700 font-medium">
-                      ระยะเวลาพักเฉลี่ย: {calculateDaysBetween(formStartDate, formEndDate)} วันที่เลือก
-                    </div>
-                  )}
+                {/* Title */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    หัวข้อ / ชื่องานลา <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น ลาพักผ่อนประจำปี, ลาป่วยมีใบรับรองแพทย์, วันปีใหม่"
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                    required
+                  />
+                </div>
 
-                  {/* Actions buttons */}
-                  <div className="pt-4 border-t border-gray-100 flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsFormOpen(false)}
-                      className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 rounded-xl text-sm font-semibold transition"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
-                    >
-                      บันทึกคำขอนี้
-                    </button>
-                  </div>
+                {/* Notes */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    เหตุผล / หมายเหตุเพิ่มเติม (ถ้ามี)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="ระบุเหตุผลหรือรายละเอียดการติดต่อฉุกเฉิน..."
+                    value={formNotes}
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
 
-                </form>
-              </motion.div>
-            </div>
+                {/* Buttons */}
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsFormOpen(false)}
+                    className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-xs hover:shadow-md transition cursor-pointer"
+                  >
+                    บันทึกข้อมูล
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
