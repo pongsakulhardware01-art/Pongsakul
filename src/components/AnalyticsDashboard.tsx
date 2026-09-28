@@ -62,8 +62,10 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
   const [reportMonth, setReportMonth] = useState<number>(today.getMonth());
   const [reportYear, setReportYear] = useState<number>(today.getFullYear());
   const [isExportingJpg, setIsExportingJpg] = useState(false);
+  const [isExportingAllJpg, setIsExportingAllJpg] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
+  const allReportRef = useRef<HTMLDivElement>(null);
   const reportSectionRef = useRef<HTMLDivElement>(null);
   const reportContainerRef = useRef<HTMLDivElement>(null);
   const [mobileFitMode, setMobileFitMode] = useState(true);
@@ -73,8 +75,8 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
     const handleResize = () => {
       if (reportContainerRef.current) {
         const containerWidth = reportContainerRef.current.clientWidth;
-        if (containerWidth < 830) {
-          const scale = Math.max(0.35, Math.min(1, (containerWidth - 8) / 820));
+        if (containerWidth < 1220) {
+          const scale = Math.max(0.28, Math.min(1, (containerWidth - 16) / 1180));
           setPreviewScale(scale);
         } else {
           setPreviewScale(1);
@@ -166,7 +168,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
     try {
       await new Promise(resolve => setTimeout(resolve, 350));
       const node = reportRef.current;
-      const targetWidth = 820;
+      const targetWidth = 1180;
       const targetHeight = node.scrollHeight;
 
       const dataUrl = await toJpeg(node, {
@@ -175,6 +177,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
         width: targetWidth,
         height: targetHeight,
         backgroundColor: '#ffffff',
+        cacheBust: true,
         style: {
           transform: 'none',
           width: `${targetWidth}px`,
@@ -200,6 +203,46 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
       alert('ไม่สามารถส่งออกภาพ JPG ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsExportingJpg(false);
+    }
+  };
+
+  const handleExportAllEmployeesReportJpg = async () => {
+    if (!allReportRef.current) return;
+    setIsExportingAllJpg(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 350));
+      const node = allReportRef.current;
+      const targetWidth = 1200;
+      const targetHeight = node.scrollHeight;
+
+      const dataUrl = await toJpeg(node, {
+        quality: 0.98,
+        pixelRatio: 2.5,
+        width: targetWidth,
+        height: targetHeight,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        style: {
+          transform: 'none',
+          width: `${targetWidth}px`,
+          height: `${targetHeight}px`,
+          maxWidth: 'none',
+          minWidth: `${targetWidth}px`,
+        }
+      });
+
+      const thaiYear = today.getFullYear() + 543;
+      const link = document.createElement('a');
+      link.download = `รายงานสรุปสิทธิ์วันลาพนักงานทุกคน_${thaiYear}.jpg`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting all employees JPG report:', error);
+      alert('ไม่สามารถส่งออกภาพสรุปภาพรวม JPG ได้ในขณะนี้');
+    } finally {
+      setIsExportingAllJpg(false);
     }
   };
 
@@ -581,7 +624,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
 
       {/* Employee Leave Quotas Balance Section */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
               <Clock className="w-5 h-5 text-rose-600" />
@@ -591,9 +634,30 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
               แสดงสิทธิ์การลาตามเกณฑ์ขั้นต่ำตามกฎหมายหรือนโยบายองค์กร (ลาพักร้อน {leaveQuotas.vacation} วัน | ลาป่วย {leaveQuotas.sick} วัน | ลากิจ {leaveQuotas.personal} วัน)
             </p>
           </div>
-          <div className="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-1.5 rounded-lg border border-rose-100 self-start sm:self-auto flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-            คำนวณสิทธิ์คงเหลืออัตโนมัติ
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportAllEmployeesReportJpg}
+              disabled={isExportingAllJpg || stats.employeeLeaveSummary.length === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition cursor-pointer shadow-3xs disabled:opacity-50"
+              title="ส่งออกตารางสรุปสิทธิ์วันลาของพนักงานทุกคนเป็นรูปภาพ JPG เต็มหน้า"
+            >
+              {isExportingAllJpg ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>กำลังส่งออก...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>ส่งออกสรุปภาพรวมทุกคน (.JPG)</span>
+                </>
+              )}
+            </button>
+            <div className="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-1.5 rounded-lg border border-rose-100 self-start sm:self-auto flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+              คำนวณสิทธิ์คงเหลืออัตโนมัติ
+            </div>
           </div>
         </div>
 
@@ -983,7 +1047,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
                   transform: (mobileFitMode && previewScale < 1) ? `scale(${previewScale})` : 'none',
                   transformOrigin: 'top center',
                 }}
-                className="w-[820px] shrink-0 bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-10 shadow-sm text-slate-800 space-y-6 font-sans mx-auto"
+                className="w-[1180px] shrink-0 bg-white border-2 border-slate-200 rounded-2xl p-8 sm:p-12 shadow-sm text-slate-800 space-y-6 font-sans mx-auto"
               >
               {/* Report Letterhead Header */}
               <div className="flex items-center justify-between border-b-2 border-rose-600 pb-5">
@@ -1170,7 +1234,7 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
               </div>
 
               {/* Document Footer */}
-              <div className="flex justify-between items-center text-[9px] text-slate-400 pt-3 border-t border-slate-100 font-mono">
+              <div className="flex justify-between items-center text-[10px] text-slate-400 pt-3 border-t border-slate-100 font-mono">
                 <span>เอกสารออกโดยระบบ บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</span>
                 <span>INTERNAL REPORT • CONFIDENTIAL</span>
               </div>
@@ -1178,6 +1242,147 @@ export default function AnalyticsDashboard({ employees, holidays, leaveQuotas }:
           </div>
         </div>
         )}
+      </div>
+
+      {/* 📸 Off-Screen Template for Full-Page All Employees Leave Quota Balance Export */}
+      <div 
+        style={{ position: 'fixed', left: '-9999px', top: '0', pointerEvents: 'none' }}
+        aria-hidden="true"
+      >
+        <div
+          ref={allReportRef}
+          style={{ width: '1200px' }}
+          className="bg-white p-10 text-slate-800 font-sans space-y-6"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b-4 border-rose-600 pb-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-rose-600 text-white font-black flex items-center justify-center text-xl shadow-md shrink-0">
+                PH
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</h2>
+                <p className="text-xs font-bold text-rose-600">PONGSAKUL HARDWARE CO., LTD.</p>
+                <p className="text-xs text-slate-500 font-medium">รายงานสรุปสิทธิ์และยอดการลาพนักงานประจำปี พ.ศ. {today.getFullYear() + 543}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-xs font-black text-rose-600 block">เอกสารฝ่ายบุคคล (HR)</span>
+              <span className="text-[11px] text-slate-400 font-mono">
+                ข้อมูล ณ วันที่: {today.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+          </div>
+
+          {/* Stats Summary Bar */}
+          <div className="grid grid-cols-4 gap-3 text-center">
+            <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+              <span className="text-[11px] font-bold text-slate-500 block">พนักงานทั้งหมด</span>
+              <span className="text-xl font-black text-slate-900 block mt-0.5">{employees.length} คน</span>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
+              <span className="text-[11px] font-bold text-emerald-800 block">สถานะปฏิบัติงาน</span>
+              <span className="text-xl font-black text-emerald-950 block mt-0.5">
+                {employees.filter(e => e.isActive).length} คน
+              </span>
+            </div>
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl">
+              <span className="text-[11px] font-bold text-rose-800 block">ยอดวันลาสะสมทั้งบริษัท</span>
+              <span className="text-xl font-black text-rose-950 block mt-0.5">
+                {holidays.reduce((sum, h) => sum + h.durationDays, 0)} วัน
+              </span>
+            </div>
+            <div className="bg-sky-50 border border-sky-200 p-3 rounded-xl">
+              <span className="text-[11px] font-bold text-sky-800 block">ค่าเฉลี่ยวันลาต่อคน</span>
+              <span className="text-xl font-black text-sky-950 block mt-0.5">{stats.averageDays} วัน</span>
+            </div>
+          </div>
+
+          {/* All Employees Quota Table */}
+          <div className="border border-slate-300 rounded-xl overflow-hidden shadow-3xs">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-[11px]">
+                  <th className="py-2.5 px-3 w-10 text-center">ที่</th>
+                  <th className="py-2.5 px-3">รหัส - ชื่อ-สกุล (ชื่อเล่น)</th>
+                  <th className="py-2.5 px-3">แผนก / ตำแหน่ง</th>
+                  <th className="py-2.5 px-2 text-center">พักร้อน ({leaveQuotas.vacation})</th>
+                  <th className="py-2.5 px-2 text-center">ป่วย ({leaveQuotas.sick})</th>
+                  <th className="py-2.5 px-2 text-center">กิจ ({leaveQuotas.personal})</th>
+                  <th className="py-2.5 px-2 text-center">พิเศษ ({leaveQuotas.special_leave})</th>
+                  <th className="py-2.5 px-2 text-center">อื่นๆ ({leaveQuotas.other})</th>
+                  <th className="py-2.5 px-2 text-center">รวมใช้ไป</th>
+                  <th className="py-2.5 px-3 text-center">สถานะสิทธิ์</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {stats.employeeLeaveSummary.map((summary, idx) => {
+                  const emp = summary.employee;
+                  return (
+                    <tr key={emp.id} className={idx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white'}>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
+                      <td className="py-2.5 px-3 font-bold text-slate-900">
+                        {emp.firstName} {emp.lastName} {emp.nickname ? `(${emp.nickname})` : ''}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 font-medium text-[11px]">
+                        {emp.department} • {emp.position}
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-amber-700">
+                        {summary.used.vacation} วัน
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-700">
+                        {summary.used.sick} วัน
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-sky-700">
+                        {summary.used.personal} วัน
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-fuchsia-700">
+                        {summary.used.special_leave} วัน
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-purple-700">
+                        {summary.used.other} วัน
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-mono font-black text-slate-900 text-sm">
+                        {summary.totalUsed} วัน
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          summary.hasExceeded 
+                            ? 'bg-rose-100 text-rose-800' 
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {summary.hasExceeded ? 'เกินสิทธิ์ ❌' : 'ปกติ ✅'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Signatures */}
+          <div className="pt-6 border-t-2 border-slate-200 grid grid-cols-2 gap-8 text-center text-xs">
+            <div className="space-y-4 p-4 border border-slate-200 rounded-xl bg-slate-50/60">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">เจ้าหน้าที่ฝ่ายบุคคล (HR)</span>
+              <div className="pt-6 border-b border-slate-400 w-2/3 mx-auto"></div>
+              <p className="font-bold text-slate-800">( ........................................................... )</p>
+              <p className="text-[10px] text-slate-400">วันที่: ...... / ...... / ..........</p>
+            </div>
+            <div className="space-y-4 p-4 border border-slate-200 rounded-xl bg-slate-50/60">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ผู้มีอำนาจอนุมัติ (Management)</span>
+              <div className="pt-6 border-b border-slate-400 w-2/3 mx-auto"></div>
+              <p className="font-bold text-slate-800">( ........................................................... )</p>
+              <p className="text-[10px] text-slate-400">วันที่: ...... / ...... / ..........</p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between items-center text-[10px] text-slate-400 pt-3 border-t border-slate-200 font-mono">
+            <span>เอกสารออกโดยระบบ บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด</span>
+            <span>INTERNAL CONFIDENTIAL REPORT • หน้า 1/1</span>
+          </div>
+        </div>
       </div>
 
     </div>

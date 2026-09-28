@@ -367,6 +367,8 @@ export default function App() {
                       employees={employees}
                       holidays={holidays}
                       onHolidaysChange={handleHolidaysChange}
+                      leaveQuotas={leaveQuotas}
+                      companyName={companyName}
                     />
                   )}
 

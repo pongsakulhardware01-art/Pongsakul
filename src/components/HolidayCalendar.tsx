@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { toJpeg } from 'html-to-image';
-import { Employee, HolidayLeave, HolidayType } from '../types';
+import { Employee, HolidayLeave, HolidayType, LeaveQuotas } from '../types';
 import { 
   Calendar, 
   ChevronLeft, 
@@ -32,11 +32,14 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateDaysBetween } from '../utils/storage';
+import ExportReportModal from './ExportReportModal';
 
 interface HolidayCalendarProps {
   employees: Employee[];
   holidays: HolidayLeave[];
   onHolidaysChange: (updatedList: HolidayLeave[]) => void;
+  leaveQuotas?: LeaveQuotas;
+  companyName?: string;
 }
 
 const THAI_MONTHS = [
@@ -72,7 +75,13 @@ const LEAVE_TYPES: {
   { type: 'other', label: 'ลาประเภทอื่น', shortLabel: 'อื่นๆ', emoji: '📌', color: 'text-purple-800', bgColor: 'bg-purple-50', borderColor: 'border-purple-200', dotColor: 'bg-purple-400' }
 ];
 
-export default function HolidayCalendar({ employees, holidays, onHolidaysChange }: HolidayCalendarProps) {
+export default function HolidayCalendar({ 
+  employees, 
+  holidays, 
+  onHolidaysChange,
+  leaveQuotas,
+  companyName
+}: HolidayCalendarProps) {
   const simulatedToday = new Date();
   
   const [currentYear, setCurrentYear] = useState(simulatedToday.getFullYear());
@@ -102,7 +111,9 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
   // Detail inspected leave
   const [inspectedLeave, setInspectedLeave] = useState<HolidayLeave | null>(null);
 
-  // Export to JPG status
+  // Export Modal state
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  // Export to JPG status (for fallback if needed)
   const [isExporting, setIsExporting] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
@@ -405,13 +416,15 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
           </button>
 
           <button
-            onClick={handleExportJPG}
-            disabled={isExporting}
-            className="inline-flex items-center justify-center px-3.5 py-2 border border-amber-300 text-amber-800 hover:bg-amber-100 bg-amber-50 disabled:opacity-50 text-xs font-bold rounded-xl transition cursor-pointer min-h-[40px] shadow-3xs"
-            title="บันทึกภาพตารางปฏิทินเพื่อส่งต่อทาง LINE หรือพิมพ์เอกสาร"
+            onClick={() => setIsExportModalOpen(true)}
+            className="inline-flex items-center justify-center px-3.5 py-2 border border-rose-300 text-rose-800 hover:bg-rose-100 bg-rose-50 text-xs font-bold rounded-xl transition cursor-pointer min-h-[40px] shadow-3xs hover:shadow-xs gap-1.5"
+            title="ส่งออกเอกสารสรุปรายการวันหยุดและวันลาเป็นภาพ JPG เต็มหน้า คมชัดพิเศษ สำหรับ LINE หรือพิมพ์เอกสาร"
           >
-            <Image className="w-4 h-4 mr-1.5 text-amber-600" />
-            {isExporting ? 'กำลังบันทึกภาพ...' : 'ส่งออกเป็นภาพ (.jpg)'}
+            <Sparkles className="w-4 h-4 text-rose-600" />
+            <span>ส่งออกสรุปรายการ (.jpg)</span>
+            <span className="hidden sm:inline-block bg-rose-600 text-white text-[9.5px] px-1.5 py-0.5 rounded-full font-black">
+              เต็มหน้า A4
+            </span>
           </button>
 
           <button
@@ -749,11 +762,10 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                       const emp = getEmployee(hol.employeeId);
                       const isAll = hol.employeeId === 'all';
                       
+                      const empName = emp?.nickname || emp?.firstName || 'พนักงาน';
                       const labelText = isAll 
-                        ? hol.title 
-                        : emp 
-                          ? `${emp.nickname || emp.firstName}: ${typeDet.shortLabel}`
-                          : hol.title;
+                        ? `📢 ${hol.title}` 
+                        : `${empName} · ${typeDet.shortLabel}`;
 
                       return (
                         <div
@@ -762,8 +774,8 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
                             e.stopPropagation();
                             setInspectedLeave(hol);
                           }}
-                          className={`px-1.5 py-0.5 rounded-md text-[10px] md:text-[10.5px] font-bold border truncate shadow-3xs flex items-center gap-1 cursor-pointer hover:brightness-95 transition ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
-                          title={`${getEmployeeName(hol.employeeId)}: ${hol.title}`}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] md:text-[10.5px] font-bold border truncate shadow-3xs flex items-center gap-1 cursor-pointer hover:brightness-95 transition ${typeDet.bgColor} ${typeDet.color} ${typeDet.borderColor}`}
+                          title={`${getEmployeeName(hol.employeeId)}: ${hol.title || typeDet.label}`}
                         >
                           <span className="text-[10px] shrink-0">{typeDet.emoji}</span>
                           <span className="truncate">{labelText}</span>
@@ -1442,6 +1454,20 @@ export default function HolidayCalendar({ employees, holidays, onHolidaysChange 
           </div>
         )}
       </AnimatePresence>
+
+      {/* 📸 Professional Full-Page JPG Export Modal */}
+      <ExportReportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        currentMonth={currentMonth}
+        currentYear={currentYear}
+        onMonthChange={setCurrentMonth}
+        onYearChange={setCurrentYear}
+        employees={employees}
+        holidays={holidays}
+        companyName={companyName}
+        leaveQuotas={leaveQuotas}
+      />
     </div>
   );
 }
