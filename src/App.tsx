@@ -51,6 +51,7 @@ export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [holidays, setHolidays] = useState<HolidayLeave[]>([]);
   const [companyName, setCompanyName] = useState<string>('บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด');
+  const [selectedAnnualEmpId, setSelectedAnnualEmpId] = useState<string | null>(null);
   const [leaveQuotas, setLeaveQuotas] = useState<LeaveQuotas>({
     vacation: 6,
     sick: 30,
@@ -59,6 +60,13 @@ export default function App() {
     other: 5
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleViewAnnualReport = (empId: string) => {
+    setSelectedAnnualEmpId(empId);
+    setActiveMenu('registry');
+    setActiveSubTab('analytics');
+    setIsMobileOpen(false);
+  };
 
   useEffect(() => {
     // 1. One-time migration from LocalStorage to Firestore
@@ -289,13 +297,13 @@ export default function App() {
           <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/50 text-[9px]">
             <div className="flex justify-between items-center text-slate-400">
               <span className="font-semibold">เวอร์ชั่นระบบ (Version)</span>
-              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.8.0</span>
+              <span className="bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded font-bold font-mono">v1.9.0</span>
             </div>
             <div className="text-[8px] text-slate-600 mt-1 space-y-0.5">
+              <p>• เพิ่มผลสรุปรายปีแบบละเอียดของแต่ละบุคคล (Detailed Annual Summary) พร้อมส่งออก JPG</p>
+              <p>• เพิ่มตารางแจกแจงสถิติวันลาสะสมแยก 12 เดือน และประวัติการลาทั้งปี</p>
               <p>• เพิ่มระบบออกรายงานสรุปการลาหยุดรายบุคคลประจำเดือน บันทึกเป็นรูปภาพ JPG</p>
               <p>• เพิ่มปุ่มทางลัด "แปลงไฟล์ PDF" ไปยัง pongsakulpdf.onrender.com</p>
-              <p>• เปลี่ยนชื่อแท็บระบบเป็น "บริษัท พงษ์สกุล ฮาร์ดแวร์ จำกัด"</p>
-              <p>• รองรับประเภทวันลาหยุดพิเศษและการล่วงหน้า</p>
             </div>
           </div>
         </div>
@@ -369,6 +377,7 @@ export default function App() {
                       onHolidaysChange={handleHolidaysChange}
                       leaveQuotas={leaveQuotas}
                       companyName={companyName}
+                      onViewEmployeeAnnualReport={handleViewAnnualReport}
                     />
                   )}
 
@@ -384,6 +393,8 @@ export default function App() {
                       employees={employees}
                       holidays={holidays}
                       leaveQuotas={leaveQuotas}
+                      companyName={companyName}
+                      initialSelectedEmpId={selectedAnnualEmpId || undefined}
                     />
                   )}
                 </div>

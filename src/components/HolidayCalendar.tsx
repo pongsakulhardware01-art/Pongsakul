@@ -28,7 +28,8 @@ import {
   Building,
   Sparkles,
   Eye,
-  Maximize2
+  Maximize2,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateDaysBetween } from '../utils/storage';
@@ -40,6 +41,7 @@ interface HolidayCalendarProps {
   onHolidaysChange: (updatedList: HolidayLeave[]) => void;
   leaveQuotas?: LeaveQuotas;
   companyName?: string;
+  onViewEmployeeAnnualReport?: (empId: string) => void;
 }
 
 const THAI_MONTHS = [
@@ -80,7 +82,8 @@ export default function HolidayCalendar({
   holidays, 
   onHolidaysChange,
   leaveQuotas,
-  companyName
+  companyName,
+  onViewEmployeeAnnualReport
 }: HolidayCalendarProps) {
   const simulatedToday = new Date();
   
@@ -1069,22 +1072,34 @@ export default function HolidayCalendar({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormEmployeeId(emp.id);
-                      setFormStartDate(selectedDate);
-                      setFormEndDate(selectedDate);
-                      setFormType('vacation');
-                      setFormTitle('');
-                      setFormNotes('');
-                      setIsFormOpen(true);
-                    }}
-                    className="w-full py-1.5 px-2 bg-white hover:bg-rose-50 border border-slate-200 text-slate-700 hover:text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-rose-600" />
-                    <span>ยื่นใบลาให้ {emp.nickname || emp.firstName}</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormEmployeeId(emp.id);
+                        setFormStartDate(selectedDate);
+                        setFormEndDate(selectedDate);
+                        setFormType('vacation');
+                        setFormTitle('');
+                        setFormNotes('');
+                        setIsFormOpen(true);
+                      }}
+                      className="py-1.5 px-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-3xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-rose-600" />
+                      <span>ยื่นใบลา</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onViewEmployeeAnnualReport?.(emp.id)}
+                      className="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-3xs"
+                      title="ดูผลสรุปรายปีแบบละเอียดของพนักงานคนนี้"
+                    >
+                      <Award className="w-3.5 h-3.5 text-rose-600" />
+                      <span>สรุปรายปี</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
