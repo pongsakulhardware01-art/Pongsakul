@@ -19,7 +19,8 @@ import {
   Loader2,
   Calculator,
   ExternalLink,
-  FileText
+  FileText,
+  ReceiptText
 } from 'lucide-react';
 import { Employee, HolidayLeave, LeaveQuotas } from './types';
 import { CompanyProvider, useCompany } from './context/CompanyContext';
@@ -168,6 +169,27 @@ function AppContent() {
                           <span className="text-xs tracking-wide block">แปลงไฟล์ PDF</span>
                           <span className="text-[9px] font-medium block leading-none mt-0.5 text-slate-500">
                             เปิดระบบเครื่องมือจัดการและแปลงไฟล์ PDF
+                          </span>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-2" />
+                      </div>
+                    </a>
+
+                    <a
+                      href="https://pongsakulquotation.onrender.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center px-4 py-3 rounded-xl text-left transition duration-150 text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 cursor-pointer group no-underline decoration-none"
+                    >
+                      <ReceiptText className="w-5 h-5 mr-3.5 shrink-0 text-slate-400 group-hover:text-slate-200 transition" />
+                      <div className="min-w-0 flex-1 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs tracking-wide block">ใบเสนอราคา</span>
+                            <span className="text-[9px] bg-rose-500/20 text-rose-400 px-1 py-0.2 rounded font-medium">ชั่วคราว</span>
+                          </div>
+                          <span className="text-[9px] font-medium block leading-none mt-0.5 text-slate-500">
+                            เปิดระบบออกใบเสนอราคาออนไลน์
                           </span>
                         </div>
                         <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition shrink-0 ml-2" />

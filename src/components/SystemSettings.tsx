@@ -661,7 +661,7 @@ export default function SystemSettings() {
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-1.5">
                 <span className="font-mono font-bold text-rose-600 text-[11px] block">🔗 ลิงก์เครื่องมือภายนอก</span>
                 <p className="text-slate-600 text-[11px] leading-relaxed">
-                  เชื่อมโยงระบบคำนวณ (<code className="text-slate-800 bg-slate-200/60 px-1 rounded">pongsakul-aicalculate</code>) และระบบแปลงไฟล์ PDF (<code className="text-slate-800 bg-slate-200/60 px-1 rounded">pongsakulpdf</code>) รวมศูนย์ที่ <code className="text-slate-800 bg-slate-200/60 px-1 rounded">appConfig.ts</code>
+                  เชื่อมโยงระบบคำนวณ (<code className="text-slate-800 bg-slate-200/60 px-1 rounded">pongsakul-aicalculate</code>), ระบบแปลงไฟล์ PDF (<code className="text-slate-800 bg-slate-200/60 px-1 rounded">pongsakulpdf</code>), และระบบใบเสนอราคา (<code className="text-slate-800 bg-slate-200/60 px-1 rounded">pongsakulquotation</code>) รวมศูนย์ที่ <code className="text-slate-800 bg-slate-200/60 px-1 rounded">appConfig.ts</code>
                 </p>
               </div>
             </div>

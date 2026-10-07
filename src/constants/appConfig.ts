@@ -31,6 +31,13 @@ export const APP_CONFIG = {
       url: 'https://pongsakulpdf.onrender.com/',
       category: 'productivity',
     },
+    {
+      id: 'quotation',
+      title: 'ใบเสนอราคา',
+      subtitle: 'เปิดระบบออกใบเสนอราคาออนไลน์',
+      url: 'https://pongsakulquotation.onrender.com/',
+      category: 'sales',
+    },
   ],
   versionHistory: [
     {
