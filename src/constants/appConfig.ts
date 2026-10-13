@@ -38,6 +38,13 @@ export const APP_CONFIG = {
       url: 'https://pongsakulquotation.onrender.com/',
       category: 'sales',
     },
+    {
+      id: 'stampsign',
+      title: 'ประทับตราและลายเซ็น',
+      subtitle: 'เปิดระบบประทับตราและลงลายเซ็นเอกสาร',
+      url: 'https://pongsakul-stampsign.onrender.com/',
+      category: 'documents',
+    },
   ],
   versionHistory: [
     {
